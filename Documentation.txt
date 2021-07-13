@@ -1,0 +1,33 @@
+
+Important Objects:
+status is a wrapper containing "classes" and "students"
+    "classes" is a vector of individual classes
+        A class is a dictionary containing "size",  "risk" and some compartments
+            "size" is the number of students in the class
+            "risk" is the probability of a single susceptible in the class becoming infected by either an asymptomatic or infected individual
+                Formula is 1 - (1 - p_A)^N_A * (1 - p_I)^N_I, where p_A and p_I are the probabilities of being infected by a single A or I respectively
+            Each compartment is keyed by its letter (e.g. "S" or "E", specifically a string), and includes a vector of indices of the students from the class in that compartment
+                Indices are to "students"
+    "students" is a vector of individual students
+        A student is a dictionary containing its compartment label (e.g. "S") and a vector of its class indices
+            Indices are to "classes"
+
+
+Important Functions:
+update_S!(status_new, status_old) (a status object, a status object)
+    Iterates through "classes" and randomly infects some of the susceptibles in the class
+        The distribution of how many new cases arise depends on the class risk, which itself depends on the number of As and Is
+    Uses values from status_old as input, and makes changes to status_new
+    NOTE: Any students who are infected from multiple classes will be first removed from S and added to E in all their classes, then for each subsequent infection they are removed from and added back into E. This probably happens infrequently enough that it's not worth optimizing.
+change_compartment!(status, ind_student, compatment_new) (a status object, an index from 1 to number of students, a compartment label (e.g. "S"))
+    Edits status by changing the compartment of the specified student to compatment_new
+    Also updates each class in which the student is enrolled by removing student's index from their old compartment and adding it to compartment_new
+    NOTE: This function will be used in update_X! for all other compartments, X
+add_risk!(class, infect_param_A, infect_param_I) (a class object, the proportionality constant for transmission probability from asymptomatics, the proportionality constant for transmission probability from infecteds)
+    Initializes or updates "risk" in "class" based on the number of asymptomatics and infecteds
+
+
+Notes:
+    The first section initializes a status object. 
+    Specifically, it constructs a collection of students with random classes and compartments, then computes the classes which match this randomly initialized structure.
+    The result is stored in "status"
