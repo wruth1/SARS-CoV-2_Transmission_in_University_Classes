@@ -12,22 +12,53 @@ status is a wrapper containing "classes" and "students"
         A student is a dictionary containing its compartment label (e.g. "S") and a vector of its class indices
             Indices are to "classes"
 
+Global Parameters:
+    status: A dictionary containing a vector of classes and a vector of students
+    infect_param_A: Proportionality constant for infection probability from asymptomatic compartment
+    infect_param_I: Proportionality constant for infection probability from infected compartment
+    advance_prob_E: Probability of an E moving to either A or I on a particular day
+    E_to_A_prob: Probability that an advancement from E is to A
+    E_to_I_prob = 1 - E_to_A_prob: Probability that an advancement from E is to I 
+    recovery_prob_A: Probability of an A moving to R on a particular day
+    recovery_prob_I: Probability of an I moving to R on a particular day
 
-Important Functions:
-update_S!(status_new, status_old) (a status object, a status object)
-    Iterates through "classes" and randomly infects some of the susceptibles in the class
-        The distribution of how many new cases arise depends on the class risk, which itself depends on the number of As and Is
-    Uses values from status_old as input, and makes changes to status_new
-    NOTE: Any students who are infected from multiple classes will be first removed from S and added to E in all their classes, then for each subsequent infection they are removed from and added back into E. This probably happens infrequently enough that it's not worth optimizing.
-change_compartment!(status, ind_student, compatment_new) (a status object, an index from 1 to number of students, a compartment label (e.g. "S"))
-    Edits status by changing the compartment of the specified student to compatment_new
-    Also updates each class in which the student is enrolled by removing student's index from their old compartment and adding it to compartment_new
-    NOTE: This function will be used in update_X! for all other compartments, X
-add_risk!(class, infect_param_A, infect_param_I) (a class object, the proportionality constant for transmission probability from asymptomatics, the proportionality constant for transmission probability from infecteds)
-    Initializes or updates "risk" in "class" based on the number of asymptomatics and infecteds
+Files:
+    Helper_Functions.jl
+        Defines get_compartments(students, X, output = "indices")
+            Extracts all students in compartment X as either indices or student objects
+        Defines change_compartment!(status, ind_student, compartment_new)
+            Moves student with given index in to compartment_new. Updates both their student object and all their classes
+    
+    Toy_Simulation.jl
+        Defines make_status(N_students, N_classes)
+            Creates a status object with the specified number of students and classes
+        Defines add_risk!(class, infect_param_A, infect_param_I) 
+            Initializes or updates "risk" in "class" based on the number of asymptomatics and infecteds
+            infect_param_A and infect_param_I are the proportionality constants for the transmission probabilities from A and I respectively
+        FIX NEEDED: Used to just contain raw code instead of being contained in a function, so some helper functions are defined inside make_status()
+    
+    Update_Functions.jl
+        Defines update_S!(status_new, status_old)
+            Moves susceptibles to exposeds in status_new based on information (especially classwise risks) in status_old
+            
+        Defines update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
+            Moves exposeds to asymptomatic or infected in status_new based on information in status_old and the supplied parameters
+            advance_prob_E is the probability of a single exposed student moving to another compartment on a specific day
+            E_to_A_prob is the probability that a given transition from E is to asymptomatic rather than infected
 
+        Defines update_A!(status_new, status_old, recovery_prob_A)
+            Moves asymptomatics to recovered in status_new based on information in status_old and the supplied parameters
+            recovery_prob_A is the probability of a single asymptomatic student moving to recovered on a specific day
+            Very similar to update_I!
+        
+        Defines update_I!(status_new, status_old, recovery_prob_I)
+            Moves infecteds to recovered in status_new based on information in status_old and the supplied parameters
+            recovery_prob_I is the probability of a single infected student moving to recovered on a specific day
+            Very similar to update_A!
 
-Notes:
-    The first section initializes a status object. 
-    Specifically, it constructs a collection of students with random classes and compartments, then computes the classes which match this randomly initialized structure.
-    The result is stored in "status"
+        NEEDS update_risk!(status_new)
+            Computes the classwise risks based on new counts of asymptomatics and infecteds
+
+    Unit_Tests.jl  
+        Contains unit tests for the functions in Update_Functions.jl
+        NEEDS unit tests for the functions in Helper_Functions.jl
