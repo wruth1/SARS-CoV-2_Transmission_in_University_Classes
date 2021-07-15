@@ -31,7 +31,7 @@ using Test
     @testset "Update_E!" begin
 
         @testset "Basic" begin
-            advance_prob_E = 0.2 # Probability of an E moving to either A or I on a particular day
+        advance_prob_E = 0.2 # Probability of an E moving to either A or I on a particular day
             E_to_A_prob = 0.5 # Probability that an advancement from E is to A
 
             status_new = deepcopy(status_old) # Make a new copy of status_new
@@ -191,7 +191,7 @@ using Test
         end
     end
 
-    @testset "Update_A!" begin
+            @testset "Update_A!" begin
         @testset "Basic" begin
             recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
 
@@ -225,7 +225,7 @@ using Test
             status_new = deepcopy(status_old) # Make a new copy of status_new
             update_A!(status_new, status_old, recovery_prob_A)
 
-            students_old = status_old["students"]
+    students_old = status_old["students"]
             students_new = status_new["students"]
 
             A_old = get_compartments(students_old, "A")
@@ -266,7 +266,7 @@ using Test
         end
     end
 
-    @testset "Update_I!" begin
+            @testset "Update_I!" begin
         @testset "Basic" begin
             recovery_prob_I = 0.2 # Probability of an I moving to R on a particular day
 
@@ -339,5 +339,60 @@ using Test
             R_diff = setdiff(R_new, R_old)
             @test issetequal(I_old, R_diff)
         end
+    end
+
+    @testset "transmit_prob" begin
+        # A normal class setup
+        size = 25
+        infect_param = 0.5
+        prob = transmit_prob(size, infect_param)
+        @test prob == 0.1
+
+        # Zero infectiousness parameter
+        infect_param = 0
+        prob = transmit_prob(size, infect_param)
+        @test prob == 0
+
+        # One infectiousness parameter
+        infect_param = 1
+        prob = transmit_prob(size, infect_param)
+        @test prob == 0.2
+
+        # Invalid infectiousness parameter
+        infect_param = 100
+        @test_throws DomainError transmit_prob(size, infect_param)
+    end
+
+    @testset "class_risk" begin
+        @testset "Basic" begin
+            infect_param = 0.5
+
+            ### Construct a sample class with known risk
+            # Build compartments
+            S = collect(1:5)
+            E = collect(6:10)
+            A = collect(11:15)
+            I = collect(16:20)
+            R = collect(21:25)
+
+            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
+
+            # Get class size
+            compartment_sizes = length.(values(a_class))
+            size = sum(compartment_sizes)
+            a_class["size"] = size
+
+            
+
+
+        end
+    end
+
+    @testset "update_risk!" begin
+        
+        
+
+
+
     end
 end

@@ -1,5 +1,7 @@
 using Random, Distributions
 
+include("Helper_Functions.jl")
+
 Random.seed!(21131346)
 
 N_classes = 10
@@ -74,27 +76,7 @@ minimum(size_check.(all_classes)) =#
 
 ### Add infection risk to each class, defined as the probability of a single S being infected by any of the As or Is
 
-# Compute risk of a single class
-    function class_risk(class, infect_param_A, infect_param_I)
-        size = class["size"]
-        p_A = infect_param_A / sqrt(size)
-        p_I = infect_param_I / sqrt(size)
 
-        n_A = length(class["A"])
-        n_I = length(class["I"])
-
-    # Probability of no infection from the specified compartment
-        contrib_A = (1 - p_A)^n_A
-        contrib_I = (1 - p_I)^n_I
-
-        risk = 1 - contrib_A * contrib_I
-    end
-
-### Incorporate the computed risk into the class
-### Note: can also be used to update the class risk if number of As or Is has changed
-    function add_risk!(class, infect_param_A, infect_param_I)
-        class["risk"] = class_risk(class, infect_param_A, infect_param_I)
-    end
     add_risk!.(all_classes, infect_param_A, infect_param_I);
 
 
@@ -102,6 +84,7 @@ minimum(size_check.(all_classes)) =#
     status = Dict("classes" => all_classes, "students" => students)
 end
 
-status_old = make_status(N_students, N_classes)
+status = make_status(N_students, N_classes)
+status_old = deepcopy(status)
 status_new = deepcopy(status_old)
 

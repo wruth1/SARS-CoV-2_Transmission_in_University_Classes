@@ -190,6 +190,14 @@ function update_I!(status_new, status_old, recovery_prob_I)
     change_compartment!.(Ref(status_new), which_to_transition, "R")
 end
 
+function update_risk!(status_new)
+    classes = status_new["classes"]
+
+    # Compute and store new classwise risks
+    add_risk!.(classes, infect_param_A, infect_param_I)
+end
+
+
 
 multiply(x,y) = x*y
 
