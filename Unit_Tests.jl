@@ -1,3 +1,4 @@
+using Base: @locals
 using Test
 
 @testset "Update_Functions" begin
@@ -364,35 +365,66 @@ using Test
     end
 
     @testset "class_risk" begin
-        @testset "Basic" begin
-            infect_param = 0.5
+        ### Construct a sample class
+        # Build compartments
+        S = collect(1:5)
+        E = collect(6:10)
+        A = collect(11:15)
+        I = collect(16:20)
+        R = collect(21:25)
 
-            ### Construct a sample class with known risk
-            # Build compartments
-            S = collect(1:5)
-            E = collect(6:10)
-            A = collect(11:15)
-            I = collect(16:20)
-            R = collect(21:25)
+        a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
 
-            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
-
-            # Get class size
-            compartment_sizes = length.(values(a_class))
-            size = sum(compartment_sizes)
-            a_class["size"] = size
-
-            
+        # Get class size
+        compartment_sizes = length.(values(a_class))
+        size = sum(compartment_sizes)
+        a_class["size"] = size
 
 
-        end
+        ## Homogeneous Infectiousness Parameters: Compute risk and compare to theoretical value
+        infect_param_A = 0.5
+        infect_param_I = 0.5
+        risk = class_risk(a_class, infect_param_A, infect_param_I)
+        @test risk == (1 - (0.9)^10)
+
+
+        ## Heterogeneous Infectiousness Parameters: Compute risk and compare to theoretical value
+        infect_param_A = 0.25
+        infect_param_I = 0.5
+        risk = class_risk(a_class, infect_param_A, infect_param_I)
+        @test risk ≈ 1 - ((0.9)^5 * (0.95)^5) # Approximate equality avoids issues with roundoff error
     end
 
     @testset "update_risk!" begin
-        
-        
+        ### Construct a sample class
+        # Build compartments
+        S = collect(1:5)
+        E = collect(6:10)
+        A = collect(11:15)
+        I = collect(16:20)
+        R = collect(21:25)
+
+        a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
+
+        # Get class size
+        compartment_sizes = length.(values(a_class))
+        size = sum(compartment_sizes)
+        a_class["size"] = size
 
 
+        ## Homogeneous Infectiousness Parameters: Compute risk and compare to theoretical value
+        infect_param_A = 0.5
+        infect_param_I = 0.5
+        compute_risk!(a_class, infect_param_A, infect_param_I)
+        risk = a_class["risk"]
+        @test risk == (1 - (0.9)^10)
 
+
+        ## Heterogeneous Infectiousness Parameters: Compute risk and compare to theoretical value
+        infect_param_A = 0.25
+        infect_param_I = 0.5
+        compute_risk!(a_class, infect_param_A, infect_param_I)
+        risk = a_class["risk"]
+        @test risk ≈ 1 - ((0.9)^5 * (0.95)^5) # Approximate equality avoids issues with roundoff error
     end
 end

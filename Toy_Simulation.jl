@@ -1,20 +1,32 @@
 using Random, Distributions
 
 include("Helper_Functions.jl")
+include("Update_Functions.jl")
 
 Random.seed!(21131346)
 
-N_classes = 10
-N_students = 50
+const N_classes = 10
+const N_students = 50
 
-infect_param_A = 1 # Proportionality constant for infection probability from asymptomatic compartment
-infect_param_I = 1 # Proportionality constant for infection probability from infected compartment
+const infect_param_A = 1 # Proportionality constant for infection probability from asymptomatic compartment
+const infect_param_I = 1 # Proportionality constant for infection probability from infected compartment
 
-advance_prob_E = 0.2 # Probability of an E moving to either A or I on a particular day
-E_to_A_prob = 0.5 # Probability that an advancement from E is to A
-E_to_I_prob = 1 - E_to_A_prob # Probability that an advancement from E is to I 
-recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
-recovery_prob_I = 0.2 # Probability of an I moving to R on a particular day
+const advance_prob_E = 0.2 # Probability of an E moving to either A or I on a particular day
+const E_to_A_prob = 0.5 # Probability that an advancement from E is to A
+# const E_to_I_prob = 1 - E_to_A_prob # Probability that an advancement from E is to I 
+const recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
+const recovery_prob_I = 0.2 # Probability of an I moving to R on a particular day
+
+#=
+### Inefficient way to pass parameters. Put them in a container only to extract them again
+const parameters = Dict(  "infect_param_A" => infect_param_A,
+                    "infect_param_I" => infect_param_I,
+                    "advance_prob_E" => advance_prob_E,
+                    "E_to_A_prob" => E_to_A_prob,
+                    "recovery_prob_A" => recovery_prob_A,
+                    "recovery_prob_I" => recovery_prob_I)
+=#
+
 
 function make_status(N_students, N_classes)
 
@@ -77,7 +89,7 @@ minimum(size_check.(all_classes)) =#
 ### Add infection risk to each class, defined as the probability of a single S being infected by any of the As or Is
 
 
-    add_risk!.(all_classes, infect_param_A, infect_param_I);
+    compute_risk!.(all_classes, infect_param_A, infect_param_I);
 
 
 ### Construct status object
@@ -85,6 +97,16 @@ minimum(size_check.(all_classes)) =#
 end
 
 status = make_status(N_students, N_classes)
-status_old = deepcopy(status)
-status_new = deepcopy(status_old)
 
+#=
+### Test update function
+status1 = deepcopy(status)
+
+a_class = deepcopy(status1["classes"][1])
+#one_step!(status1, infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I)
+one_step!(status1)
+a_class_again = status1["classes"][1]
+
+println(a_class)
+println(a_class_again)
+=#

@@ -190,26 +190,45 @@ function update_I!(status_new, status_old, recovery_prob_I)
     change_compartment!.(Ref(status_new), which_to_transition, "R")
 end
 
-function update_risk!(status_new)
+# Re-compute risks for each class and update the class objects
+function update_risk!(status_new, infect_param_A, infect_param_I)
     classes = status_new["classes"]
 
     # Compute and store new classwise risks
-    add_risk!.(classes, infect_param_A, infect_param_I)
+    compute_risk!.(classes, infect_param_A, infect_param_I)
 end
 
 
+# Runs a single time step and update status with parameters defined explicitly
+function one_step!(status, infect_param_A = infect_param_A, infect_param_I = infect_param_I, 
+    advance_prob_E = advance_prob_E, E_to_A_prob = E_to_A_prob, 
+    recovery_prob_A = recovery_prob_A, recovery_prob_I = recovery_prob_I)
+    status_new = status
+    status_old = deepcopy(status)
 
-multiply(x,y) = x*y
+    update_S!(status_new, status_old)
+    update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
+    update_A!(status_new, status_old, recovery_prob_A)
+    update_I!(status_new, status_old, recovery_prob_I)
+    
+    update_risk!(status_new, infect_param_A, infect_param_I)
 
+    status = status_new
+end
 
-######################################
-### End defining update functions  ###
-###                                ###
-### Begin testing update functions ###
-######################################
+#=
+# Runs a single time step and update status with parameters drawn from global scope
+function one_step!(status)
+    status_new = status
+    status_old = deepcopy(status)
 
+    update_S!(status_new, status_old)
+    update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
+    update_A!(status_new, status_old, recovery_prob_A)
+    update_I!(status_new, status_old, recovery_prob_I)
+    
+    update_risk!(status_new, infect_param_A, infect_param_I)
 
-status_old = status
-status_new = deepcopy(status)
-
-update_S!(status_new, status_old)
+    status = status_new
+end
+=#

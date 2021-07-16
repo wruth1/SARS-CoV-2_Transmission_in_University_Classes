@@ -11,6 +11,8 @@ status is a wrapper containing "classes" and "students"
     "students" is a vector of individual students
         A student is a dictionary containing its compartment label (e.g. "S") and a vector of its class indices
             Indices are to "classes"
+    "parameters" is a dictionary containing all the scalar parameters defined in the Global Parameters section
+        I.e. Everything but status
 
 Global Parameters:
     status: A dictionary containing a vector of classes and a vector of students
@@ -28,11 +30,18 @@ Files:
             Extracts all students in compartment X as either indices or student objects
         Defines change_compartment!(status, ind_student, compartment_new)
             Moves student with given index in to compartment_new. Updates both their student object and all their classes
+        Defines transmit_prob(class_size, infect_param)
+            Computes the probability of transmission allong a single pair
+            Defined explicitly to allow easy modification throughout rest of code
+        Defines class_risk(class, infect_param_A, infect_param_I)
+            Computes the class' risk under the given parameter values (see Important Objects section for definition)
+        Defines update_risk!(class, infect_param_A, infect_param_I)
+            Calls class_risk and stores the result in class["risk"]
     
     Toy_Simulation.jl
         Defines make_status(N_students, N_classes)
             Creates a status object with the specified number of students and classes
-        Defines add_risk!(class, infect_param_A, infect_param_I) 
+        Defines update_risk!(class, infect_param_A, infect_param_I) 
             Initializes or updates "risk" in "class" based on the number of asymptomatics and infecteds
             infect_param_A and infect_param_I are the proportionality constants for the transmission probabilities from A and I respectively
         FIX NEEDED: Used to just contain raw code instead of being contained in a function, so some helper functions are defined inside make_status()
@@ -56,9 +65,15 @@ Files:
             recovery_prob_I is the probability of a single infected student moving to recovered on a specific day
             Very similar to update_A!
 
-        NEEDS update_risk!(status_new)
+        Defines update_risk!(status_new)
             Computes the classwise risks based on new counts of asymptomatics and infecteds
 
+        Defines one_step!(status)
+            Calls all other updating functions on status
+            Can also be called with all parameters passed explicitly
+                Caution: Because of Julia's multiple dispatch, it is best to either pass all parameters or none.
+                In particular, you cannot specify, e.g., recovery_prob_A = recovery_prob_A. Arguments are only
+                identified by their position
+
     Unit_Tests.jl  
-        Contains unit tests for the functions in Update_Functions.jl
-        NEEDS unit tests for the functions in Helper_Functions.jl
+        Contains unit tests for the functions in Update_Functions.jl and Helper_Functions.jl

@@ -76,6 +76,34 @@ end
 
 ### Incorporate the computed risk into the class
 ### Note: can also be used to update the class risk if number of As or Is has changed
-function add_risk!(class, infect_param_A, infect_param_I)
+function compute_risk!(class, infect_param_A, infect_param_I)
     class["risk"] = class_risk(class, infect_param_A, infect_param_I)
 end
+
+
+##########################
+### Here be dragons!!! ###
+##########################
+
+### Trying to write a function which takes a variable and adds its value to a dictionary with key equal to the variable's name
+### This doesn't seem like a thing anyone wants to do
+
+#=
+# A macro which returns the name of an object
+macro get_name(x)
+    string(x)
+end
+
+function push_dict!(x)
+
+    name = @get_name($x)
+    name
+end
+
+function f()
+    Main.@locals()
+end
+
+f(x) = @locals()
+
+=#
