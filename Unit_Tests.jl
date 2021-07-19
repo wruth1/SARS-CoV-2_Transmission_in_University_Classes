@@ -1,4 +1,3 @@
-using Base: @locals
 using Test
 
 @testset "Update_Functions" begin
@@ -427,4 +426,127 @@ using Test
         risk = a_class["risk"]
         @test risk ≈ 1 - ((0.9)^5 * (0.95)^5) # Approximate equality avoids issues with roundoff error
     end
+end
+
+@testset "Compartment Counts" begin
+    @testset "classwise_compartment_count" begin
+        @testset "Basic" begin
+            ### Construct a sample class
+            S = collect(1:5)
+            E = collect(6:10)
+            A = collect(11:15)
+            I = collect(16:20)
+            R = collect(21:25)
+
+            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
+
+            @test classwise_compartment_count(a_class, "S") == 5
+            @test classwise_compartment_count(a_class, "E") == 5
+            @test classwise_compartment_count(a_class, "A") == 5
+            @test classwise_compartment_count(a_class, "I") == 5
+            @test classwise_compartment_count(a_class, "R") == 5
+        end
+
+        @testset "Empty Class" begin
+            ### Construct an empty class
+            S = Vector{Any}(nothing, 0)
+            E = Vector{Any}(nothing, 0)
+            A = Vector{Any}(nothing, 0)
+            I = Vector{Any}(nothing, 0)
+            R = Vector{Any}(nothing, 0)
+
+            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
+
+            @test classwise_compartment_count(a_class, "S") == 0
+            @test classwise_compartment_count(a_class, "E") == 0
+            @test classwise_compartment_count(a_class, "A") == 0
+            @test classwise_compartment_count(a_class, "I") == 0
+            @test classwise_compartment_count(a_class, "R") == 0
+        end
+    end
+
+    @testset "status_compartment_count" begin
+        @testset "Basic" begin
+            ### Construct a sample class
+            S = collect(1:5)
+            E = collect(6:10)
+            A = collect(11:15)
+            I = collect(16:20)
+            R = collect(21:25)
+
+            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
+
+            ### Construct a fake status object without any students
+            classes = [a_class for i in 1:3]
+            status = Dict("classes" => classes)
+
+            @test status_compartment_count(status, "S") == 15
+            @test status_compartment_count(status, "E") == 15
+            @test status_compartment_count(status, "A") == 15
+            @test status_compartment_count(status, "I") == 15
+            @test status_compartment_count(status, "R") == 15
+        end
+
+        @testset "Empty Classes" begin
+            ### Construct an empty class
+            S = Vector{Any}(nothing, 0)
+            E = Vector{Any}(nothing, 0)
+            A = Vector{Any}(nothing, 0)
+            I = Vector{Any}(nothing, 0)
+            R = Vector{Any}(nothing, 0)
+
+            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
+
+            ### Construct a fake status object without any students
+            classes = [a_class for i in 1:3]
+            status = Dict("classes" => classes)
+
+            @test status_compartment_count(status, "S") == 0
+            @test status_compartment_count(status, "E") == 0
+            @test status_compartment_count(status, "A") == 0
+            @test status_compartment_count(status, "I") == 0
+            @test status_compartment_count(status, "R") == 0
+        end
+
+        @testset "Mixed Classes" begin
+            ### Construct an empty class
+            S = Vector{Any}(nothing, 0)
+            E = Vector{Any}(nothing, 0)
+            A = Vector{Any}(nothing, 0)
+            I = Vector{Any}(nothing, 0)
+            R = Vector{Any}(nothing, 0)
+
+            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
+
+
+            ### Construct a sample class
+            S = collect(1:5)
+            E = collect(6:10)
+            A = collect(11:15)
+            I = collect(16:20)
+            R = collect(21:25)
+
+            b_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
+
+
+            ### Construct a fake status object without any students
+            both_classes = [a_class, b_class]
+            classes = [both_classes[i%2 + 1] for i in 1:4] # Alternate class type
+            status = Dict("classes" => classes)
+
+            @test status_compartment_count(status, "S") == 10
+            @test status_compartment_count(status, "E") == 10
+            @test status_compartment_count(status, "A") == 10
+            @test status_compartment_count(status, "I") == 10
+            @test status_compartment_count(status, "R") == 10
+        end
+    end
+
+    @testset "compartment_trajectory" begin
+        
+    end
+
+            
+    
+
 end

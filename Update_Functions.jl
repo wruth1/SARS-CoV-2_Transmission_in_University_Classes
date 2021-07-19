@@ -199,6 +199,7 @@ function update_risk!(status_new, infect_param_A, infect_param_I)
 end
 
 
+#=
 # Runs a single time step and update status with parameters defined explicitly
 function one_step!(status, infect_param_A = infect_param_A, infect_param_I = infect_param_I, 
     advance_prob_E = advance_prob_E, E_to_A_prob = E_to_A_prob, 
@@ -215,8 +216,9 @@ function one_step!(status, infect_param_A = infect_param_A, infect_param_I = inf
 
     status = status_new
 end
+=#
 
-#=
+
 # Runs a single time step and update status with parameters drawn from global scope
 function one_step!(status)
     status_new = status
@@ -231,4 +233,25 @@ function one_step!(status)
 
     status = status_new
 end
-=#
+
+# Runs through a full term starting in status_initial and running for the specified number of days
+function one_term(status_initial, days)
+    # Container to store all status objects, stating with the initial state
+    all_statuses = Vector{Any}(nothing, days+1) 
+    all_statuses[1] = status_initial
+
+    # We need to make sure each entry in all_statuses is a deepcopy, but it would also be nice to not make
+    # more such copies than necessary.
+    status_old = deepcopy(status_initial)
+
+    for i ∈ 1:days
+        status_new = deepcopy(status_old)
+        one_step!(status_new)
+
+        all_statuses[i+1] = status_new
+
+        status_old = status_new
+    end
+
+    all_statuses
+end

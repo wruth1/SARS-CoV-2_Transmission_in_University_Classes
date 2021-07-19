@@ -35,8 +35,16 @@ Files:
             Defined explicitly to allow easy modification throughout rest of code
         Defines class_risk(class, infect_param_A, infect_param_I)
             Computes the class' risk under the given parameter values (see Important Objects section for definition)
-        Defines update_risk!(class, infect_param_A, infect_param_I)
+        Defines compute_risk!(class, infect_param_A, infect_param_I)
             Calls class_risk and stores the result in class["risk"]
+        Defines classwise_compartment_count(class, X)
+            Gets the number of students in class who are in compartment X
+        Defines status_compartment_count(status, X)
+            Gets the number of students in compartment X across all classes in status
+        Defines compartment_trajectory(all_statuses, X)
+            Gets the number of students in compartment X at each step in all_statuses and returns as a vector
+            NEEDS UNIT TESTS
+        
     
     Toy_Simulation.jl
         Defines make_status(N_students, N_classes)
@@ -75,5 +83,10 @@ Files:
                 In particular, you cannot specify, e.g., recovery_prob_A = recovery_prob_A. Arguments are only
                 identified by their position
 
+        Defines one_term(status_initial, days)
+            Runs the simulation stating at the given status for the specified number of days
+            NEEDS UNIT TESTS
+
     Unit_Tests.jl  
         Contains unit tests for the functions in Update_Functions.jl and Helper_Functions.jl
+        NEEDED: Tests for compartment_trajectory from Helper_Functions.jl and one_term from Update_Functions.jl

@@ -74,6 +74,7 @@ function class_risk(class, infect_param_A, infect_param_I)
     risk = 1 - contrib_A * contrib_I
 end
 
+
 ### Incorporate the computed risk into the class
 ### Note: can also be used to update the class risk if number of As or Is has changed
 function compute_risk!(class, infect_param_A, infect_param_I)
@@ -81,7 +82,41 @@ function compute_risk!(class, infect_param_A, infect_param_I)
 end
 
 
+
+###########################################
+### Extract information from simulation ###
+###########################################
+
+# Get the number of students in compartment X in the provided class
+function classwise_compartment_count(class, X)
+    length(class[X])
+end
+
+# Get the number of students in compartment X from the provided status object
+function status_compartment_count(status, X)
+    classes = status["classes"]
+    all_sizes = classwise_compartment_count.(classes, X)
+    size = sum(all_sizes)
+end
+
+# Get the number of students in compartment X across time in the provided sequence of status objects
+function compartment_trajectory(all_statuses, X)
+    all_sizes = status_compartment_count.(all_statuses, X)
+    all_sizes
+end
+
+
+
+
+
+
+
+
+
+
+
 ##########################
+
 ### Here be dragons!!! ###
 ##########################
 

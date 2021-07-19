@@ -17,6 +17,8 @@ const E_to_A_prob = 0.5 # Probability that an advancement from E is to A
 const recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
 const recovery_prob_I = 0.2 # Probability of an I moving to R on a particular day
 
+const days = 10 # Number of days in a term
+
 #=
 ### Inefficient way to pass parameters. Put them in a container only to extract them again
 const parameters = Dict(  "infect_param_A" => infect_param_A,
@@ -97,6 +99,8 @@ minimum(size_check.(all_classes)) =#
 end
 
 status = make_status(N_students, N_classes)
+status_new = deepcopy(status)
+status_old = deepcopy(status)
 
 #=
 ### Test update function
