@@ -4,7 +4,13 @@ using Test
     include("Toy_Simulation.jl")
     include("Update_Functions.jl")
 
+    @testset "get_new_cases" begin
+        @testset
+    end
+
     @testset "Update_S!" begin
+
+
         update_S!(status_new, status_old)
 
         students_old = status_old["students"]

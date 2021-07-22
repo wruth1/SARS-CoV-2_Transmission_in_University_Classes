@@ -7,6 +7,7 @@ Random.seed!(21131346)
 
 const N_classes = 10
 const N_students = 50
+const week_length = 7
 
 const infect_param_A = 1 # Proportionality constant for infection probability from asymptomatic compartment
 const infect_param_I = 1 # Proportionality constant for infection probability from infected compartment
@@ -54,9 +55,17 @@ function make_status(N_students, N_classes)
 
 # Note: Classes have already been determined by constructing students. We just need to extract the class info
 
+# Choose randomly selected days for a class to meet
+function meeting_days(week_length)
+    n_meetings = sample(1:week_length, 1)[1]
+    meetings = sample(1:week_length, n_meetings, replace=false)
+end
+
 ### Create empty classes using array comprehension
     all_classes = [Dict("size" => 0, "S" => Vector{Int}(), "E" => Vector{Int}(), "A" => Vector{Int}(), "I" => Vector{Int}(),
-"R" => Vector{Int}()) for i in 1:N_classes]
+                "R" => Vector{Int}(), "days" => meeting_days(week_length)) for i in 1:N_classes]
+
+    
 
 # Adds student number ind_student with the specified compartment to class
     function add_student!(compartment, ind_student, class)

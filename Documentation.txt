@@ -2,10 +2,11 @@
 Important Objects:
 status is a wrapper containing "classes" and "students"
     "classes" is a vector of individual classes
-        A class is a dictionary containing "size",  "risk" and some compartments
+        A class is a dictionary containing "size", "risk", "days", and some compartments
             "size" is the number of students in the class
             "risk" is the probability of a single susceptible in the class becoming infected by either an asymptomatic or infected individual
                 Formula is 1 - (1 - p_A)^N_A * (1 - p_I)^N_I, where p_A and p_I are the probabilities of being infected by a single A or I respectively
+            "days" is the indices of days on which the class meets (1 = Monday, 2 = Tuesday,..., 7 = Sunday)
             Each compartment is keyed by its letter (e.g. "S" or "E", specifically a string), and includes a vector of indices of the students from the class in that compartment
                 Indices are to "students"
     "students" is a vector of individual students
@@ -55,8 +56,13 @@ Files:
         FIX NEEDED: Used to just contain raw code instead of being contained in a function, so some helper functions are defined inside make_status()
     
     Update_Functions.jl
-        Defines update_S!(status_new, status_old)
+        Defines update_S!(status_new, status_old, day)
             Moves susceptibles to exposeds in status_new based on information (especially classwise risks) in status_old
+            Only allows transmission via classes which meet on the specified day
+            Note: A susceptible can be targeted for infection via multiple classes in which they are enrolled. For updating purposes, 
+                this is identical to only being infected once. This is clearly preferable to the alternative, which requires that susceptibles 
+                in classes later in the for loop are at greater risk (since more of the susceptibles in these later classes will have moved to 
+                a different compartment)
             
         Defines update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
             Moves exposeds to asymptomatic or infected in status_new based on information in status_old and the supplied parameters
