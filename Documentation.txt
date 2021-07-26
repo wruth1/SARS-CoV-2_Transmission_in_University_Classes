@@ -10,8 +10,9 @@ status is a wrapper containing "classes" and "students"
             Each compartment is keyed by its letter (e.g. "S" or "E", specifically a string), and includes a vector of indices of the students from the class in that compartment
                 Indices are to "students"
     "students" is a vector of individual students
-        A student is a dictionary containing its compartment label (e.g. "S") and a vector of its class indices
-            Indices are to "classes"
+        A student is a dictionary containing:
+            "compartment" -  Its compartment label (e.g. "S") 
+            "classes" - A vector of its class indices. Indices are to the global "classes" object
     "parameters" is a dictionary containing all the scalar parameters defined in the Global Parameters section
         I.e. Everything but status
 
@@ -96,3 +97,7 @@ Files:
     Unit_Tests.jl  
         Contains unit tests for the functions in Update_Functions.jl and Helper_Functions.jl
         NEEDED: Tests for compartment_trajectory from Helper_Functions.jl and one_term from Update_Functions.jl
+
+    Read_Data.jl
+        Defines read_data(address)
+            Takes the address of a data file and builds the corresponding status object

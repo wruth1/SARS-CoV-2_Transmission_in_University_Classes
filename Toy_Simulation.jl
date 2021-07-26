@@ -67,11 +67,7 @@ end
 
     
 
-# Adds student number ind_student with the specified compartment to class
-    function add_student!(compartment, ind_student, class)
-        class["size"] += 1
-        push!(class[compartment], ind_student)
-    end
+
 
     for i in 1:N_students
         this_student = students[i]
@@ -79,7 +75,7 @@ end
         this_classes_ind = this_student["classes"]
         this_classes = all_classes[this_classes_ind]
 
-        add_student!.(this_compartment, i, this_classes)
+        add_student!.(this_classes, i, this_compartment)
     end
 
 #= 

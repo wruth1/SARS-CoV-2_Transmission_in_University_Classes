@@ -234,11 +234,11 @@ end =#
 
 
 # Runs a single time step and update status with parameters drawn from global scope
-function one_step!(status)
+function one_step!(status, day)
     status_new = status
     status_old = deepcopy(status)
 
-    update_S!(status_new, status_old)
+    update_S!(status_new, status_old, day)
     update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
     update_A!(status_new, status_old, recovery_prob_A)
     update_I!(status_new, status_old, recovery_prob_I)
@@ -249,22 +249,26 @@ function one_step!(status)
 end
 
 # Runs through a full term starting in status_initial and running for the specified number of days
-function one_term(status_initial, days)
+function one_term(status_initial, n_days)
     # Container to store all status objects, stating with the initial state
-    all_statuses = Vector{Any}(nothing, days + 1) 
+    all_statuses = Vector{Any}(nothing, n_days + 1) 
     all_statuses[1] = status_initial
 
     # We need to make sure each entry in all_statuses is a deepcopy, but it would also be nice to not make
     # more such copies than necessary.
     status_old = deepcopy(status_initial)
 
-    for i ∈ 1:days
+    day = 1
+
+    for i ∈ 1:n_days
         status_new = deepcopy(status_old)
-        one_step!(status_new)
+        one_step!(status_new, day)
 
         all_statuses[i + 1] = status_new
 
         status_old = status_new
+
+        day = (day % week_length) + 1
     end
 
     all_statuses

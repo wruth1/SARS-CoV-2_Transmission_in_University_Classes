@@ -1,0 +1,4 @@
+Update documentation to reflect addition of day throughout helper functions and update functions
+Document Read_Data.jl and functions used therein
+Write unit tests for functions used in Read_Data.jl
+Make sure all functions in Helper_Functions.jl are documented and tested
