@@ -2,7 +2,7 @@ name: learn-github-actions
 on: [push]
 jobs:
   a_job:
-  name: A Job
+    name: A Job
     runs-on: ubuntu-latest
     steps:
       - name: Print something
