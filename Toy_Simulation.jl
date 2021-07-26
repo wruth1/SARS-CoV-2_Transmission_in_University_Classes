@@ -5,20 +5,20 @@ include("Update_Functions.jl")
 
 Random.seed!(21131346)
 
-const N_classes = 10
-const N_students = 50
-const week_length = 7
+N_classes = 10
+N_students = 50
+week_length = 7
 
-const infect_param_A = 1 # Proportionality constant for infection probability from asymptomatic compartment
-const infect_param_I = 1 # Proportionality constant for infection probability from infected compartment
+infect_param_A = 1 # Proportionality constant for infection probability from asymptomatic compartment
+infect_param_I = 1 # Proportionality constant for infection probability from infected compartment
 
-const advance_prob_E = 0.2 # Probability of an E moving to either A or I on a particular day
-const E_to_A_prob = 0.5 # Probability that an advancement from E is to A
+advance_prob_E = 0.2 # Probability of an E moving to either A or I on a particular day
+E_to_A_prob = 0.5 # Probability that an advancement from E is to A
 # const E_to_I_prob = 1 - E_to_A_prob # Probability that an advancement from E is to I 
-const recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
-const recovery_prob_I = 0.2 # Probability of an I moving to R on a particular day
+recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
+recovery_prob_I = 0.2 # Probability of an I moving to R on a particular day
 
-const days = 10 # Number of days in a term
+days = 10 # Number of days in a term
 
 #=
 ### Inefficient way to pass parameters. Put them in a container only to extract them again

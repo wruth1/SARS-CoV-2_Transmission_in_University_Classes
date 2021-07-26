@@ -6,8 +6,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Print something
-        env:
-          intro: "Hello there, "
-          name: "William"
         run: |
-          echo $intro $name
+          julia Unit_Tests_Windows.jl

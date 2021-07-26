@@ -1,10 +1,11 @@
-using Base: Float64
 using Plots
 using Random, Distributions # For Update_Functions.jl
 using DataFrames, CSV # For Read_Data.jl
 
 
 Random.seed!(21131346)
+const M = 10 # Number of times to replicate each parameter combination
+
 
 #############################
 ### Initialize parameters ###
@@ -34,19 +35,13 @@ include("Read_Data.jl"); # This must be run after initializing parameters so tha
 
 status = read_data("Data/Small-Data.csv")
 
-### Introduce a few initial cases
-n_students = length(status["students"])
-inds_infect = sample(1:n_students, n_initial_cases, replace=false)
-change_compartment!.(Ref(status), inds_infect, "I")
-
-
-sim_output = one_term(status, n_days)
-
-
+all_sim_outputs = [run_sim(status, n_initial_cases, n_days) for i in 1:M]
 
 ##################################
 ### Process simulation results ###
 ##################################
+
+sim_output = all_sim_outputs[1]
 
 S_traj = compartment_trajectory(sim_output, "S")
 E_traj = compartment_trajectory(sim_output, "E")

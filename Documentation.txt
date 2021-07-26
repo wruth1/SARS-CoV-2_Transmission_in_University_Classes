@@ -94,6 +94,10 @@ Files:
             Runs the simulation stating at the given status for the specified number of days
             NEEDS UNIT TESTS
 
+        Defines run_sim(status, n_initial_cases, n_days)
+            Infects some initial cases, then runs the simulation on a copy of status
+            NEEDS UNIT TESTS
+
     Unit_Tests.jl  
         Contains unit tests for the functions in Update_Functions.jl and Helper_Functions.jl
         NEEDED: Tests for compartment_trajectory from Helper_Functions.jl and one_term from Update_Functions.jl

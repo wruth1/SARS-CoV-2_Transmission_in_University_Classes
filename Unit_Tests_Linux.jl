@@ -1,12 +1,13 @@
 using Test
 
 @testset "Update_Functions" begin
-    include("Toy_Simulation.jl")
-    include("Update_Functions.jl")
+    #include("~/Toy_Simulation.jl")
 
+    #=
     @testset "get_new_cases" begin
         @testset
     end
+    =#
 
     @testset "Update_S!" begin
 

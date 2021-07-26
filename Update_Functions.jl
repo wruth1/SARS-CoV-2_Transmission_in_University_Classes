@@ -273,3 +273,21 @@ function one_term(status_initial, n_days)
 
     all_statuses
 end
+
+### Infects a few initial cases and runs the simulation on a copy of status
+### ToDo: Needs unit tests
+"""
+    run_sim(status, n_initial_cases, n_days)
+
+    Create a copy of status, infect the specified number of initial cases, then generate an infection trajectory.
+"""
+function run_sim(status, n_initial_cases, n_days)
+    this_status = deepcopy(status)
+
+    ### Introduce a few initial cases
+    n_students = length(this_status["students"])
+    inds_infect = sample(1:n_students, n_initial_cases, replace=false)
+    change_compartment!.(Ref(this_status), inds_infect, "I")
+
+    one_term(this_status, n_days)
+end
