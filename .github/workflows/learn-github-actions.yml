@@ -1,15 +1,13 @@
 name: learn-github-actions
 on: [push]
 jobs:
-  check-bats-version:
+  a_job:
+  name: A Job
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-      -run: npm install -g bats
-      -run: bats -v
-
-
-      # This doesn't currently work!!!!
+      - name: Print something
+        env:
+          intro: "Hello there, "
+          name: "William"
+        run: |
+          echo $intro $name
