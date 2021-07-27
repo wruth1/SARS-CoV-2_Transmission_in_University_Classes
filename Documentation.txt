@@ -46,6 +46,9 @@ Files:
         Defines compartment_trajectory(all_statuses, X)
             Gets the number of students in compartment X at each step in all_statuses and returns as a vector
             NEEDS UNIT TESTS
+        Defines trajectory_summary(all_trajs)
+            Computes the means and SDs at each time point in the provided trajectories
+            In all_trajs, rows index replicates while columns index days
         
     
     Toy_Simulation.jl

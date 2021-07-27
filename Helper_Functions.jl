@@ -6,7 +6,7 @@
 # If output = "indices", return the students' indices in students
 # If output = "students", return the student objects
 # ----------------------------------------------------------------------------------- Might be better to split this into two functions
-function get_compartments(students, X, output = "indices")
+function get_compartments(students, X, output="indices")
     if output == "indices"
         findall(w -> w["compartment"] == X, students)
         
@@ -31,7 +31,7 @@ function change_compartment!(status, ind_student, compartment_new)
         this_compartment_new = this_class[compartment_new]
 
         # Remove this student from their old compartment
-        filter!(x -> x!=ind_student, this_compartment_old)
+        filter!(x -> x != ind_student, this_compartment_old)
 
         # Add this student to their new compartment
         push!(this_compartment_new, ind_student)
@@ -105,7 +105,22 @@ function compartment_trajectory(all_statuses, X)
     all_sizes
 end
 
+### Takes an array of trajectories and returns the mean and SD trajectories
+### Rows index replicates, columns index days
+function trajectory_summary(all_trajs)
+    mean_trajs = zeros(n_days + 1)
+    sd_trajs = zeros(n_days + 1)
+    for i in 1:(n_days + 1)
+        this_vals = all_trajs[:,i]
 
+        this_mean = mean(this_vals)
+        mean_trajs[i] = this_mean
+
+        sd_trajs[i] = stdm(this_vals, this_mean)
+    end
+    
+    Dict("means" => mean_trajs, "sds" => sd_trajs)
+end
 
 
 
@@ -143,7 +158,7 @@ function make_empty_class(data, crs_id)
     this_entries = filter(row -> row.Anonymized_Crs_ID == crs_id, data)
     an_entry = this_entries[1,:]
     days_vec = Vector(an_entry[[:MON, :TUES, :WED, :THURS, :FRI, :SAT, :SUN]])
-    days = findall(x -> x==1, days_vec)
+    days = findall(x -> x == 1, days_vec)
     class["days"] = days
 
     ### Create empty compartments
@@ -203,7 +218,7 @@ end
 ### Trying to write a function which takes a variable and adds its value to a dictionary with key equal to the variable's name
 ### This doesn't seem like a thing anyone wants to do
 
-#=
+#= 
 # A macro which returns the name of an object
 macro get_name(x)
     string(x)
@@ -219,6 +234,4 @@ function f()
     Main.@locals()
 end
 
-f(x) = @locals()
-
-=#
+f(x) = @locals() =#

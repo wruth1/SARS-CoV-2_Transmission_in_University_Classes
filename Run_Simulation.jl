@@ -1,10 +1,11 @@
 using Plots
 using Random, Distributions # For Update_Functions.jl
 using DataFrames, CSV # For Read_Data.jl
+using Statistics # For faster computation of standard deviations
 
 
 Random.seed!(21131346)
-const M = 10 # Number of times to replicate each parameter combination
+const M = 2 # Number of times to replicate each parameter combination
 
 
 #############################
@@ -35,11 +36,23 @@ include("Read_Data.jl"); # This must be run after initializing parameters so tha
 
 status = read_data("Data/Small-Data.csv")
 
-all_sim_outputs = [run_sim(status, n_initial_cases, n_days) for i in 1:M]
+all_sim_outputs = [run_sim(status, n_initial_cases, n_days) for i in 1:M];
 
 ##################################
 ### Process simulation results ###
 ##################################
+
+all_I_trajs_raw = compartment_trajectory.(all_sim_outputs, "I")
+all_I_trajs = [all_I_trajs_raw[i][j] for i in 1:M, j in 1:(n_days + 1)]
+
+I_traj_summaries = trajectory_summary(all_I_trajs)
+I_means = I_traj_summaries["means"]
+I_sds = I_traj_summaries["sds"]
+
+
+gr()
+plot(0:n_days, I_means, ribbon = I_sds, fillalpha = 0.5, label = "Mean I Trajectory with ± 1 SD")
+
 
 sim_output = all_sim_outputs[1]
 
