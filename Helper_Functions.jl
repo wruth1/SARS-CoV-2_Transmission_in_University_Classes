@@ -122,6 +122,36 @@ function trajectory_summary(all_trajs)
     Dict("means" => mean_trajs, "sds" => sd_trajs)
 end
 
+"""
+    mean_trajectory(all_sim_outputs, compartment)
+
+Get the mean trajectory for the specified compartment across all simulation runs.
+
+
+"""
+function mean_trajectory(all_sim_outputs, compartment)
+    all_trajs_raw = compartment_trajectory.(all_sim_outputs, compartment)
+    all_trajs = [all_trajs_raw[i][j] for i in 1:M, j in 1:(n_days + 1)]
+    
+    traj_summaries = trajectory_summary(all_trajs)
+    traj_means = traj_summaries["means"]
+end
+
+
+"""
+trajectory_sd(all_sim_outputs, compartment)
+
+Get the pointwise sd of the trajectories for the specified compartment across all simulation runs.
+
+
+"""
+function trajectory_sd(all_sim_outputs, compartment)
+    all_trajs_raw = compartment_trajectory.(all_sim_outputs, compartment)
+    all_trajs = [all_trajs_raw[i][j] for i in 1:M, j in 1:(n_days + 1)]
+    
+    traj_summaries = trajectory_summary(all_trajs)
+    traj_sds = traj_summaries["sds"]
+end
 
 
 #####################################################################

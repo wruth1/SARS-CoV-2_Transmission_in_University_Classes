@@ -7,7 +7,7 @@ using DataFrames, CSV
 
 ### Read-in data from the specified file and construct the corresponding status object
 ### I.e. Build students and classes, then put them in a container called status
-function read_data(address)
+function read_data(address, add_risk = true)
 
     data = DataFrame(CSV.File(address))
 
@@ -27,7 +27,9 @@ function read_data(address)
 ### Build classes
     classes = make_empty_class.(Ref(data), crs_ids)
     incorporate_all_students!(classes, students)
-    compute_risk!.(classes, infect_param_A, infect_param_I)
+    if add_risk
+        compute_risk!.(classes, infect_param_A, infect_param_I)
+    end
 
     status = Dict("students" => students, "classes" => classes)
 end

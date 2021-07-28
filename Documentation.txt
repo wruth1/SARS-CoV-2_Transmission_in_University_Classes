@@ -49,7 +49,10 @@ Files:
         Defines trajectory_summary(all_trajs)
             Computes the means and SDs at each time point in the provided trajectories
             In all_trajs, rows index replicates while columns index days
-        
+        Defines mean_trajectory(all_sim_outputs, compartment)
+            Computes the mean trajectory for the specified compartment across simulation runs
+        Defines trajectory_sd(all_sim_outputs, compartment)
+            Computes the pointwise sd of the trajectory for the specified compartment across simulation runs
     
     Toy_Simulation.jl
         Defines make_status(N_students, N_classes)
@@ -67,44 +70,42 @@ Files:
                 this is identical to only being infected once. This is clearly preferable to the alternative, which requires that susceptibles 
                 in classes later in the for loop are at greater risk (since more of the susceptibles in these later classes will have moved to 
                 a different compartment)
-            
         Defines update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
             Moves exposeds to asymptomatic or infected in status_new based on information in status_old and the supplied parameters
             advance_prob_E is the probability of a single exposed student moving to another compartment on a specific day
             E_to_A_prob is the probability that a given transition from E is to asymptomatic rather than infected
-
         Defines update_A!(status_new, status_old, recovery_prob_A)
             Moves asymptomatics to recovered in status_new based on information in status_old and the supplied parameters
             recovery_prob_A is the probability of a single asymptomatic student moving to recovered on a specific day
             Very similar to update_I!
-        
         Defines update_I!(status_new, status_old, recovery_prob_I)
             Moves infecteds to recovered in status_new based on information in status_old and the supplied parameters
             recovery_prob_I is the probability of a single infected student moving to recovered on a specific day
             Very similar to update_A!
-
         Defines update_risk!(status_new)
             Computes the classwise risks based on new counts of asymptomatics and infecteds
-
         Defines one_step!(status)
             Calls all other updating functions on status
             Can also be called with all parameters passed explicitly
                 Caution: Because of Julia's multiple dispatch, it is best to either pass all parameters or none.
                 In particular, you cannot specify, e.g., recovery_prob_A = recovery_prob_A. Arguments are only
                 identified by their position
-
         Defines one_term(status_initial, days)
             Runs the simulation stating at the given status for the specified number of days
             NEEDS UNIT TESTS
-
         Defines run_sim(status, n_initial_cases, n_days)
             Infects some initial cases, then runs the simulation on a copy of status
             NEEDS UNIT TESTS
+        Defines one_parameter_set(.)
+            Runs M simulation replicates with the specified parameter values on the provided initialized status object.
+            See function definition for argument list. Broadly, it takes model parameters as inputs
 
     Unit_Tests.jl  
         Contains unit tests for the functions in Update_Functions.jl and Helper_Functions.jl
         NEEDED: Tests for compartment_trajectory from Helper_Functions.jl and one_term from Update_Functions.jl
 
     Read_Data.jl
-        Defines read_data(address)
+        Defines read_data(address, add_risk)
             Takes the address of a data file and builds the corresponding status object
+            add_risk is a boolean, which indicates whether classwise risks should be computed
+                WARNING: if add_risk = true, then infectiousness parameters must be defined in the calling scope

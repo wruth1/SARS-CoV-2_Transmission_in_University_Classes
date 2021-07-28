@@ -5,7 +5,7 @@ using Statistics # For faster computation of standard deviations
 
 
 Random.seed!(21131346)
-const M = 2 # Number of times to replicate each parameter combination
+M = 5 # Number of times to replicate each parameter combination
 
 
 #############################
@@ -28,20 +28,25 @@ n_initial_cases = 10
 
 include("Helper_Functions.jl");
 include("Update_Functions.jl");
-include("Read_Data.jl"); # This must be run after initializing parameters so that classwise risks can be computed
+include("Read_Data.jl"); 
 
 ######################
 ### Run Simulation ###
 ######################
 
-status = read_data("Data/Small-Data.csv")
+status_raw = read_data("Data/Small-Data.csv", false) 
 
+all_sim_outputs = one_parameter_set(status_raw, M, 
+infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
+
+### This line should be made redundant by the previous one.
 all_sim_outputs = [run_sim(status, n_initial_cases, n_days) for i in 1:M];
 
 ##################################
 ### Process simulation results ###
 ##################################
 
+### Plot mean trajectory for I with uncertainty
 all_I_trajs_raw = compartment_trajectory.(all_sim_outputs, "I")
 all_I_trajs = [all_I_trajs_raw[i][j] for i in 1:M, j in 1:(n_days + 1)]
 
@@ -54,13 +59,12 @@ gr()
 plot(0:n_days, I_means, ribbon = I_sds, fillalpha = 0.5, label = "Mean I Trajectory with ± 1 SD")
 
 
-sim_output = all_sim_outputs[1]
-
-S_traj = compartment_trajectory(sim_output, "S")
-E_traj = compartment_trajectory(sim_output, "E")
-A_traj = compartment_trajectory(sim_output, "A")
-I_traj = compartment_trajectory(sim_output, "I")
-R_traj = compartment_trajectory(sim_output, "R")
+### Plot mean trajectories for all compartments
+S_traj = mean_trajectory(all_sim_outputs, "S")
+E_traj = mean_trajectory(all_sim_outputs, "E")
+A_traj = mean_trajectory(all_sim_outputs, "A")
+I_traj = mean_trajectory(all_sim_outputs, "I")
+R_traj = mean_trajectory(all_sim_outputs, "R")
 
 
 plotly()

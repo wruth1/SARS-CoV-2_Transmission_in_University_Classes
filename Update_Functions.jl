@@ -291,3 +291,28 @@ function run_sim(status, n_initial_cases, n_days)
 
     one_term(this_status, n_days)
 end
+
+
+"""
+    one_parameter_set(status_raw, M, 
+    infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
+
+Run M simulation replicates with the specified parameter values on the provided initialized status object.
+
+# Arguments
+- ` status_raw`: A status object containing students and classes, but WITHOUT ANY CLASSWISE RISKS
+- `M`: Number of times to replicate the simulation
+- `infect_param_A`: Proportionality constant for infection probability from asymptomatic compartment
+- `infect_param_I`: Proportionality constant for infection probability from infected compartment
+- `advance_prob_E`: Probability of an E moving to either A or I on a particular day
+- `E_to_A_prob`: Probability that an advancement from E is to A
+- `recovery_prob_A`: Probability of an A moving to R on a particular day
+- `recovery_prob_I`: Probability of an I moving to R on a particular day
+- `n_initial_cases`: Number of students to move to the I compartment before starting each simulation
+"""
+function one_parameter_set(status_raw, M, 
+    infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
+    status = deepcopy(status_raw)
+    compute_risk!.(status["classes"], infect_param_A, infect_param_I)
+    all_sim_outputs = [run_sim(status, n_initial_cases, n_days) for i in 1:M];
+end
