@@ -294,13 +294,12 @@ end
 
 
 """
-    one_parameter_set(status_raw, M, 
-    infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
+    one_parameter_set(status_raw, M, infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
 
 Run M simulation replicates with the specified parameter values on the provided initialized status object.
 
 # Arguments
-- ` status_raw`: A status object containing students and classes, but WITHOUT ANY CLASSWISE RISKS
+- `status_raw`: A status object containing students and classes, but WITHOUT ANY CLASSWISE RISKS
 - `M`: Number of times to replicate the simulation
 - `infect_param_A`: Proportionality constant for infection probability from asymptomatic compartment
 - `infect_param_I`: Proportionality constant for infection probability from infected compartment

@@ -142,8 +142,6 @@ end
 trajectory_sd(all_sim_outputs, compartment)
 
 Get the pointwise sd of the trajectories for the specified compartment across all simulation runs.
-
-
 """
 function trajectory_sd(all_sim_outputs, compartment)
     all_trajs_raw = compartment_trajectory.(all_sim_outputs, compartment)
