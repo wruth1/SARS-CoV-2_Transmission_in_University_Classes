@@ -32,17 +32,10 @@ function read_data(address, add_risk=true)
 
 
 ### Build classes
-### todo Adding classes to students is very fast. No progress indicator is needed here
     classes = @showprogress "Initializing classes..." [make_empty_class(data, crs_ids[j]) for j in eachindex(crs_ids)]
-    @showprogress "Adding students to classes..." for i in eachindex(students)
-        this_student = students[i]
-        incorporate_student!(classes, this_student, i)
-    end
-    # incorporate_all_students!(classes, students)
+    incorporate_all_students!(classes, students)
     if add_risk
-        @showprogress "Computing classwise risks..." for j in eachindex(classes)
-            compute_risk!(classes[j], infect_param_A, infect_param_I)
-        end
+        compute_risk!.(classes, infect_param_A, infect_param_I)
     end
 
     status = Dict("students" => students, "classes" => classes)
