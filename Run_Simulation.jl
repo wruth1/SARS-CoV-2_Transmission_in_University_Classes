@@ -4,6 +4,7 @@ using DataFrames, CSV # For Read_Data.jl
 using Statistics # For faster computation of standard deviations
 using ProgressMeter # To track progress for long loops
 using Pipe # Improved pipe operator
+using JLD # Save and load variables
 
 
 Random.seed!(21131346)
@@ -44,8 +45,11 @@ include("Read_Data.jl");
 ### Run Simulation ###
 ######################
 
-### Raw status because it does not yet have classwise risks
-status_raw = read_data("Data/2019-Fall.csv", false) 
+### Raw status because it does not yet have classwise risks. 
+### Either compute and store (slow), or read from disk (fast)
+# status_raw = read_data("Data/2019-Fall.csv", false) 
+# save("Data/Objects/Status_Raw.jld", "status_raw", status_raw)
+status_raw = load("Data/Objects/Status_Raw.jld", "status_raw")
 
 all_sim_outputs = one_parameter_set(status_raw, M, 
 infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
