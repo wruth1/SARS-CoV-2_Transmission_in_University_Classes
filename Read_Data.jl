@@ -27,6 +27,13 @@ function read_data(address, add_risk=true)
     crs_ids = unique(crs_ids_full)
 
 
+    # ### Trying to build students in parallel
+    # students = Vector{Any}(undef, length(stu_ids))
+    # @showprogress "Building students..." @distributed for i in eachindex(stu_ids)
+    #     students[i] = make_student(data, stu_ids[i], crs_ids)
+    # end
+
+
 ### Build students
     students = @showprogress "Building students..." [make_student(data, stu_ids[i], crs_ids) for i in eachindex(stu_ids)]
 

@@ -92,11 +92,28 @@ function classwise_compartment_count(class, X)
     length(class[X])
 end
 
-# Get the number of students in compartment X from the provided status object
+
+"""
+    status_compartment_count(status, X)
+
+Get the number of students in compartment X from the provided status object.
+"""
 function status_compartment_count(status, X)
     classes = status["classes"]
-    all_sizes = classwise_compartment_count.(classes, X)
-    size = sum(all_sizes)
+    size = @pipe classes |> 
+           map(class -> class[X], _) |>
+           reduce(vcat, _) |>
+           unique(_) |>
+           length(_)
+end
+
+"""
+    all_compartment_counts(status, compartments = ["S", "E", "A", "I", "R"])
+
+Finds the number of students in each specified compartment within the provided status object.
+"""
+function all_compartment_counts(status, compartments = ["S", "E", "A", "I", "R"])
+    all_counts = status_compartment_count.(Ref(status), compartments)
 end
 
 # Get the number of students in compartment X across time in the provided sequence of status objects

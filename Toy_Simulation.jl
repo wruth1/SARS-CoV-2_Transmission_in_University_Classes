@@ -1,4 +1,4 @@
-using Random, Distributions
+using Random, Distributions, ProgressMeter
 
 include("Helper_Functions.jl")
 include("Update_Functions.jl")

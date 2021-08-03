@@ -3,10 +3,14 @@ using Random, Distributions # For Update_Functions.jl
 using DataFrames, CSV # For Read_Data.jl
 using Statistics # For faster computation of standard deviations
 using ProgressMeter # To track progress for long loops
+using Pipe # Improved pipe operator
 
 
 Random.seed!(21131346)
-M = 5 # Number of times to replicate each parameter combination
+M = 10 # Number of times to replicate each parameter combination
+
+max_threads = Threads.nthreads()
+num_threads = max_threads - 1 # Leave one thread available while code is running
 
 
 #############################
@@ -15,6 +19,9 @@ M = 5 # Number of times to replicate each parameter combination
 
 const n_days = 90 # Number of days in a term. This might change between terms
 const week_length = 7
+
+const all_compartments = ["S", "E", "A", "I", "R"]
+const num_compartments = length(all_compartments)
 
 const all_infect_param_As = ()
 

@@ -248,30 +248,41 @@ function one_step!(status, day)
     status = status_new
 end
 
-# Runs through a full term starting in status_initial and running for the specified number of days
-function one_term(status_initial, n_days)
-    # Container to store all status objects, stating with the initial state
-    all_statuses = Vector{Any}(nothing, n_days + 1) 
-    all_statuses[1] = status_initial
 
-    # We need to make sure each entry in all_statuses is a deepcopy, but it would also be nice to not make
-    # more such copies than necessary.
-    status_old = deepcopy(status_initial)
+"""
+    one_term(status_initial, n_days)
+
+Runs through a full term starting in status_initial and running for the specified number of days.
+
+Output: A vector of compartment sizes.
+"""
+function one_term(status_initial, n_days)
+    # Container to store all compartment counts
+    trajectories = Array{Int64}(undef, n_days + 1, num_compartments)
+    initial_counts = all_compartment_counts(status_initial)
+    trajectories[1,:] = initial_counts
 
     day = 1
 
-    for i ∈ 1:n_days
-        status_new = deepcopy(status_old)
+    # Initialize status_old
+    status_old = status_initial
+
+    # i=1 #! Only un-comment for testing outside of run_sim
+    # M=1 #! Only un-comment for testing outside of run_sim
+    # @showprogress "Running simulation $i of $M..." for j ∈ 1:n_days
+    for j ∈ 1:n_days
+            status_new = deepcopy(status_old)
         one_step!(status_new, day)
 
-        all_statuses[i + 1] = status_new
+        this_compartment_counts = all_compartment_counts(status_new)
+        trajectories[j + 1,:] = this_compartment_counts
 
         status_old = status_new
 
         day = (day % week_length) + 1
     end
 
-    all_statuses
+    trajectories
 end
 
 ### Infects a few initial cases and runs the simulation on a copy of status
@@ -281,15 +292,19 @@ end
 
     Create a copy of status, infect the specified number of initial cases, then generate an infection trajectory.
 """
-function run_sim(status, n_initial_cases, n_days)
-    this_status = deepcopy(status)
+function run_sim(status_raw, n_initial_cases, n_days)
+    this_status = deepcopy(status_raw)
 
     ### Introduce a few initial cases
     n_students = length(this_status["students"])
     inds_infect = sample(1:n_students, n_initial_cases, replace=false)
     change_compartment!.(Ref(this_status), inds_infect, "I")
 
-    one_term(this_status, n_days)
+    ### Compute classwise risks
+    compute_risk!.(this_status["classes"], infect_param_A, infect_param_I)
+
+
+    q = one_term(this_status, n_days)
 end
 
 
@@ -311,7 +326,8 @@ Run M simulation replicates with the specified parameter values on the provided 
 """
 function one_parameter_set(status_raw, M, 
     infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
-    status = deepcopy(status_raw)
-    compute_risk!.(status["classes"], infect_param_A, infect_param_I)
-    all_sim_outputs = [run_sim(status, n_initial_cases, n_days) for i in 1:M];
+    all_sim_outputs = @showprogress "Running simulation..." [run_sim(status, n_initial_cases, n_days) for i in 1:M];
 end
+
+
+# all_risks = [this_status["classes"][i]["risk"] for i in eachindex(classes)]
