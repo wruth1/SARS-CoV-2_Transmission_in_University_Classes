@@ -107,11 +107,11 @@ function status_compartment_count(status, X)
 end
 
 """
-    all_compartment_counts(status, compartments = ["S", "E", "A", "I", "R"])
+    all_compartment_counts(status, compartments = all_compartments)
 
 Finds the number of students in each specified compartment within the provided status object.
 """
-function all_compartment_counts(status, compartments = ["S", "E", "A", "I", "R"])
+function all_compartment_counts(status, compartments = all_compartments)
     all_counts = status_compartment_count.(Ref(status), compartments)
 end
 
@@ -212,11 +212,9 @@ function make_empty_class(data, crs_id)
     class["days"] = days
 
     ### Create empty compartments
-    class["S"] = Vector{Int64}()
-    class["E"] = Vector{Int64}()
-    class["A"] = Vector{Int64}()
-    class["I"] = Vector{Int64}()
-    class["R"] = Vector{Int64}()
+    for X in all_compartments
+        class[X] = Vector{Int64}()
+    end
 
     ### Initialize class size
     class["size"] = 0

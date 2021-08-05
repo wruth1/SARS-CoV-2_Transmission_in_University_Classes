@@ -5,6 +5,7 @@ Epidemic Model: Susceptible
                 Removed
 
             S → E → A → R
+                 ↘  ↓  ↗        
                   ↘ I ↗
 
 

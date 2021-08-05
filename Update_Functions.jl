@@ -74,55 +74,7 @@ function update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
     end
 
     # Choose specific individuals to transition out of E
-    # WARNING: We are sampling indices to students, not indices to inds_E
-    which_to_transition = sample(inds_E, n_leaving, replace=false)
-
-    # Choose how many of the transitions are to A and I
-    binom_to_A = Binomial(n_leaving, E_to_A_prob)
-    n_to_A = rand(binom_to_A, 1)[1] 
-    n_to_I = n_leaving - n_to_A
-
-    # Choose individuals and perform transitions to A
-    if n_to_A != 0
-        which_to_A = sample(which_to_transition, n_to_A, replace=false)
-        change_compartment!.(Ref(status_new), which_to_A, "A")
-    else
-        # Even if no transitions to A occur, still create an empty container so we can do 
-        # set arithmetic to get indices transitioning to I
-        which_to_A = Vector{Int64}()
-    end
-
-    # Choose individuals and perform transitions to I
-    if n_to_I != 0
-        which_to_I = setdiff(which_to_transition, which_to_A)
-        change_compartment!.(Ref(status_new), which_to_I, "I")
-    end
-end
-
-# Moves some fraction of Es to A and/or I.
-# Changes are made in status_new, values for computation are obtained from status_old.
-# advance_prob_E is the day-wise probability of an E moving to some other compartment
-# E_to_A_prob is the proportion of transitions out of E which are to A (the rest go to I)
-function update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
-    students_old = status_old["students"]
-
-    # We only need the indices of the students in E. Extract these indices here
-    inds_E = get_compartments(students_old, "E")
-
-    # Get number transitioning out out of E
-    n_E = length(inds_E)
-    if n_E == 0
-        return nothing # End the process if there are no exposeds
-    end
-    this_binom = Binomial(n_E, advance_prob_E)
-    n_leaving = rand(this_binom, 1)[1] # Need output to be a scalar, not a length 1 vector
-
-    if n_leaving == 0
-        return nothing # End the process here if no transitions occur
-    end
-
-    # Choose specific individuals to transition out of E
-    # WARNING: We are sampling indices to students, not indices to inds_E
+    #! WARNING: We are sampling indices to students, not indices to inds_E
     which_to_transition = sample(inds_E, n_leaving, replace=false)
 
     # Choose how many of the transitions are to A and I
@@ -150,30 +102,53 @@ end
 # Moves some fraction of As to R.
 # Changes are made in status_new, values for computation are obtained from status_old.
 # recovery_prob_A is the probability of a particular asymptomatic recovering on a specific day
-function update_A!(status_new, status_old, recovery_prob_A)
+"""
+    update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
+
+Choose a random number of As to move to other compartments using advance_prob_A. 
+These individuals are divided between I and R using A_to_R_prob.
+
+Note: It might feel slightly more natural to focus on the A to I transitions than A to R. 
+However, this function emphasizes R to make it easier to distinguish function from update_E!. Specifically, Es never move to R, and
+As never move to A.
+"""
+function update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
     students_old = status_old["students"]
 
     # We only need the indices of the students in A. Extract these indices here
     inds_A = get_compartments(students_old, "A")
 
-    # Get number transitioning out out of A
+    ### Get number transitioning out out of A
     n_A = length(inds_A)
-    if n_A == 0
-        return nothing # End the process if there are no exposeds
-    end
-    this_binom = Binomial(n_A, recovery_prob_A)
+    n_A != 0 ? nothing : return nothing # End the process if there are no exposeds
+    this_binom = Binomial(n_A, advance_prob_A)
     n_leaving = rand(this_binom, 1)[1] # Need output to be a scalar, not a length 1 vector
+    n_leaving != 0 ? nothing : return nothing # End the process if no individuals leave A
 
-    if n_leaving == 0
-        return nothing # End the process here if no transitions occur
-    end
+    # Choose how many of the transitions are to R and I
+    binom_to_R = Binomial(n_leaving, A_to_R_prob)
+    n_to_R = rand(binom_to_R, 1)[1] 
+    n_to_I = n_leaving - n_to_R
 
     # Choose specific individuals to transition out of A
-    # WARNING: We are sampling indices to students, not indices to inds_A
+    #! WARNING: We are sampling indices to students, not indices to inds_A
     which_to_transition = sample(inds_A, n_leaving, replace=false)
 
-    # Update status_new
-    change_compartment!.(Ref(status_new), which_to_transition, "R")
+    # Choose individuals and perform transitions to R
+    if n_to_R != 0
+        which_to_R = sample(which_to_transition, n_to_R, replace=false)
+        change_compartment!.(Ref(status_new), which_to_R, "R")
+    else
+        # Even if no transitions to A occur, still create an empty container so we can do 
+        # set arithmetic to get indices transitioning to I
+        which_to_R = Vector{Int64}()
+    end
+
+    # Choose individuals and perform transitions to I
+    if n_to_I != 0
+        which_to_I = setdiff(which_to_transition, which_to_R)
+        change_compartment!.(Ref(status_new), which_to_I, "I")
+    end
 end
 
 # Moves some fraction of Is to R.
@@ -214,25 +189,6 @@ function update_risk!(status_new, infect_param_A, infect_param_I)
 end
 
 
-#= 
-# Runs a single time step and update status with parameters defined explicitly
-function one_step!(status, infect_param_A = infect_param_A, infect_param_I = infect_param_I, 
-    advance_prob_E = advance_prob_E, E_to_A_prob = E_to_A_prob, 
-    recovery_prob_A = recovery_prob_A, recovery_prob_I = recovery_prob_I)
-    status_new = status
-    status_old = deepcopy(status)
-
-    update_S!(status_new, status_old)
-    update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
-    update_A!(status_new, status_old, recovery_prob_A)
-    update_I!(status_new, status_old, recovery_prob_I)
-    
-    update_risk!(status_new, infect_param_A, infect_param_I)
-
-    status = status_new
-end =#
-
-
 # Runs a single time step and update status with parameters drawn from global scope
 function one_step!(status, day)
     status_new = status
@@ -240,7 +196,7 @@ function one_step!(status, day)
 
     update_S!(status_new, status_old, day)
     update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
-    update_A!(status_new, status_old, recovery_prob_A)
+    update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
     update_I!(status_new, status_old, recovery_prob_I)
     
     update_risk!(status_new, infect_param_A, infect_param_I)

@@ -26,15 +26,21 @@ const num_compartments = length(all_compartments)
 
 const all_infect_param_As = ()
 
-const infect_param_A = 1 # Proportionality constant for infection probability from asymptomatic compartment
-const infect_param_I = 1 # Proportionality constant for infection probability from infected compartment
-const advance_prob_E = 0.2 # Probability of an E moving to either A or I on a particular day
-const E_to_A_prob = 0.5 # Probability that an advancement from E is to A
-# const E_to_I_prob = 1 - E_to_A_prob # Probability that an advancement from E is to I 
-const recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
-const recovery_prob_I = 0.2 # Probability of an I moving to R on a particular day
+const infect_param_I = 1 # Proportionality constant for infection probability from symptomatic compartment
+const infect_param_A = 0.75 * infect_param_I # Proportionality constant for infection probability from 
+                                             # asymptomatic compartment (Johansson et al. 2021)
+const advance_prob_E = 1/5.2 # Probability of an E moving to either A or I on a particular day (Li et al. 2020)
+const E_to_A_prob = 0.16 # Probability that an advancement from E is to A (Byambasuren et al. 2020)
+const disease_progress_prob = 0.5 # Probability of an A moving to I on a particular day (modified heavily from Anderson et al. 2021)
+const recovery_prob_A = disease_progress_prob / 9 # Probability of an A moving to R on a particular day (One value from Public Health Ontatio 2021)
+const recovery_prob_I = 1/11.8 # Probability of an I moving to R on a particular day (Public Health Ontario 2021)
 
 n_initial_cases = 10
+
+### Useful global values
+advance_prob_A = 1 - (1 - disease_progress_prob) * (1 - recovery_prob_A) # Probability of leaving A on a particular day
+A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       # Probability of moving to R conditional on leaving A
+
 
 
 include("Helper_Functions.jl");
@@ -84,13 +90,6 @@ sd_trajectories = trajectory_summaries(all_sim_outputs, std)
 
 
 gr()
-
-p = plot(0:n_days, S_traj, ribbon=S_sds, fillalpha=0.5, label="S");
-plot!(p, 0:n_days, E_traj, ribbon=E_sds, fillalpha=0.5, label="E");
-plot!(p, 0:n_days, A_traj, ribbon=A_sds, fillalpha=0.5, label="A");
-plot!(p, 0:n_days, I_traj, ribbon=I_sds, fillalpha=0.5, label="I");
-plot!(p, 0:n_days, R_traj, ribbon=R_sds, fillalpha=0.5, label="R");
-plot(p)
 
 p2 = plot();
 for X in all_compartments

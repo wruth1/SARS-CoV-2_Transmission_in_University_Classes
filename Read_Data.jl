@@ -1,8 +1,3 @@
-###! WARNING: Building classes requires us to compute classwise risks. However, this calculation depends on the infectiousness parameters.
-###!          These parameters must be defined either here or in the calling environment.
-# infect_param_A = 1
-# infect_param_I = 1
-
 using DataFrames, CSV
 
 """
