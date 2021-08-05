@@ -54,65 +54,54 @@ status_raw = load("Data/Objects/Status_Raw.jld", "status_raw")
 all_sim_outputs = one_parameter_set(status_raw, M, 
 infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
 
-### This line should be made redundant by the previous one.
-# all_sim_outputs = [run_sim(status, n_initial_cases, n_days) for i in 1:M];
-
 ##################################
 ### Process simulation results ###
 ##################################
 
 ### Plot mean trajectory for I with uncertainty
-all_I_trajs_raw = compartment_trajectory.(all_sim_outputs, "I")
-all_I_trajs = [all_I_trajs_raw[i][j] for i in 1:M, j in 1:(n_days + 1)]
-
-I_traj_summaries = trajectory_summary(all_I_trajs)
-I_means = I_traj_summaries["means"]
-I_sds = I_traj_summaries["sds"]
+I_means = compartment_trajectory_summary(all_sim_outputs, "I", mean)
+I_sds = compartment_trajectory_summary(all_sim_outputs, "I", std)
 
 
 gr()
-plot(0:n_days, I_means, ribbon = I_sds, fillalpha = 0.5, label = "Mean I Trajectory with ± 1 SD")
+plot(0:n_days, I_means, ribbon=I_sds, fillalpha=0.5, label="Mean I Trajectory with ± 1 SD")
 
 
 ### Plot mean trajectories for all compartments
-S_traj = mean_trajectory(all_sim_outputs, "S")
-E_traj = mean_trajectory(all_sim_outputs, "E")
-A_traj = mean_trajectory(all_sim_outputs, "A")
-I_traj = mean_trajectory(all_sim_outputs, "I")
-R_traj = mean_trajectory(all_sim_outputs, "R")
-
+mean_trajectories = trajectory_summaries(all_sim_outputs, mean)
 
 plotly()
-
-p = plot(0:n_days, S_traj, label = "S");
-plot!(p, 0:n_days, E_traj, label = "E");
-plot!(p, 0:n_days, A_traj, label = "A");
-plot!(p, 0:n_days, I_traj, label = "I");
-plot!(p, 0:n_days, R_traj, label = "R");
+p = plot();
+for X in all_compartments
+    plot!(p, 0:n_days, mean_trajectories[:, X], label=X);
+end
 plot(p)
 
 
+
 ### Plot mean trajectories for all compartments with uncertainty
-S_sds = trajectory_sd(all_sim_outputs, "S")
-E_sds = trajectory_sd(all_sim_outputs, "E")
-A_sds = trajectory_sd(all_sim_outputs, "A")
-I_sds = trajectory_sd(all_sim_outputs, "I")
-R_sds = trajectory_sd(all_sim_outputs, "R")
+sd_trajectories = trajectory_summaries(all_sim_outputs, std)
 
 
 gr()
 
-p = plot(0:n_days, S_traj, ribbon = S_sds, fillalpha = 0.5, label = "S");
-plot!(p, 0:n_days, E_traj, ribbon = E_sds, fillalpha = 0.5, label = "E");
-plot!(p, 0:n_days, A_traj, ribbon = A_sds, fillalpha = 0.5, label = "A");
-plot!(p, 0:n_days, I_traj, ribbon = I_sds, fillalpha = 0.5, label = "I");
-plot!(p, 0:n_days, R_traj, ribbon = R_sds, fillalpha = 0.5, label = "R");
+p = plot(0:n_days, S_traj, ribbon=S_sds, fillalpha=0.5, label="S");
+plot!(p, 0:n_days, E_traj, ribbon=E_sds, fillalpha=0.5, label="E");
+plot!(p, 0:n_days, A_traj, ribbon=A_sds, fillalpha=0.5, label="A");
+plot!(p, 0:n_days, I_traj, ribbon=I_sds, fillalpha=0.5, label="I");
+plot!(p, 0:n_days, R_traj, ribbon=R_sds, fillalpha=0.5, label="R");
 plot(p)
+
+p2 = plot();
+for X in all_compartments
+    plot!(p2, 0:n_days, mean_trajectories[:, X], ribbon=sd_trajectories[:, X], fillalpha=0.5, label=X);
+end
+plot(p2)
 
 
 ### Add vertical lines for weekends
-Fridays = (0:5)*7 .+ 5
+Fridays = (0:5) * 7 .+ 5
 Sundays = Fridays .+ 2
 weekends = vcat(Fridays, Sundays)
 
-vline!(p, weekends, label = "Weekends")
+vline!(p2, weekends, label="Weekends")

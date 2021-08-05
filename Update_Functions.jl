@@ -290,7 +290,8 @@ end
 """
     run_sim(status, n_initial_cases, n_days)
 
-    Create a copy of status, infect the specified number of initial cases, then generate an infection trajectory.
+    Create a copy of status, infect the specified number of initial cases, 
+    then generate an infection trajectory and return it as a data frame.
 """
 function run_sim(status_raw, n_initial_cases, n_days)
     this_status = deepcopy(status_raw)
@@ -304,8 +305,10 @@ function run_sim(status_raw, n_initial_cases, n_days)
     compute_risk!.(this_status["classes"], infect_param_A, infect_param_I)
 
 
-    q = one_term(this_status, n_days)
+    trajectories_mat = one_term(this_status, n_days)
+    trajectories_data = DataFrame(trajectories_mat, all_compartments)
 end
+
 
 
 """
@@ -326,7 +329,7 @@ Run M simulation replicates with the specified parameter values on the provided 
 """
 function one_parameter_set(status_raw, M, 
     infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
-    all_sim_outputs = @showprogress "Running simulation..." [run_sim(status, n_initial_cases, n_days) for i in 1:M];
+    all_sim_outputs = @showprogress "Running simulation..." [run_sim(status_raw, n_initial_cases, n_days) for i in 1:M];
 end
 
 

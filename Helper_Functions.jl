@@ -5,7 +5,6 @@
 # Find all students in compartment X
 # If output = "indices", return the students' indices in students
 # If output = "students", return the student objects
-# ----------------------------------------------------------------------------------- Might be better to split this into two functions
 function get_compartments(students, X, output="indices")
     if output == "indices"
         findall(w -> w["compartment"] == X, students)
@@ -101,10 +100,10 @@ Get the number of students in compartment X from the provided status object.
 function status_compartment_count(status, X)
     classes = status["classes"]
     size = @pipe classes |> 
-           map(class -> class[X], _) |>
-           reduce(vcat, _) |>
-           unique(_) |>
-           length(_)
+           map(class -> class[X], _) |> # Extract compartment X
+           reduce(vcat, _) |>           # Concatenate all classes' compartment X
+           unique(_) |>                 # Retain only 1 copy of each student
+           length(_)                    # Count number of distinct students
 end
 
 """
@@ -116,58 +115,64 @@ function all_compartment_counts(status, compartments = ["S", "E", "A", "I", "R"]
     all_counts = status_compartment_count.(Ref(status), compartments)
 end
 
-# Get the number of students in compartment X across time in the provided sequence of status objects
-function compartment_trajectory(all_statuses, X)
+# Get the number of students in compartment X across time in the provided matrix of compartment counts
+function compartment_trajectory(sim_output, X)
+
     all_sizes = status_compartment_count.(all_statuses, X)
     all_sizes
 end
 
-### Takes an array of trajectories and returns the mean and SD trajectories
-### Rows index replicates, columns index days
-function trajectory_summary(all_trajs)
-    mean_trajs = zeros(n_days + 1)
-    sd_trajs = zeros(n_days + 1)
-    for i in 1:(n_days + 1)
-        this_vals = all_trajs[:,i]
-
-        this_mean = mean(this_vals)
-        mean_trajs[i] = this_mean
-
-        sd_trajs[i] = stdm(this_vals, this_mean)
-    end
-    
-    Dict("means" => mean_trajs, "sds" => sd_trajs)
-end
-
-"""
-    mean_trajectory(all_sim_outputs, compartment)
-
-Get the mean trajectory for the specified compartment across all simulation runs.
 
 
 """
-function mean_trajectory(all_sim_outputs, compartment)
-    all_trajs_raw = compartment_trajectory.(all_sim_outputs, compartment)
-    all_trajs = [all_trajs_raw[i][j] for i in 1:M, j in 1:(n_days + 1)]
-    
-    traj_summaries = trajectory_summary(all_trajs)
-    traj_means = traj_summaries["means"]
+    complete_compartment_trajectories(all_sim_outputs, X)
+
+Extracts all trajectories for compartment X from all_sim_outputs.
+
+Output: A matrix with rows indexing time and columns indexing simulation runs.
+"""
+function complete_compartment_trajectories(all_sim_outouts, X)
+    @pipe all_sim_outouts |>
+        map(sim_output -> sim_output[!,X], _) |>    # Extract trajectories for this compartment
+        reduce(hcat, _)                             # Staple trajectories together
 end
 
 
 """
-trajectory_sd(all_sim_outputs, compartment)
+    compartment_trajectory_summary(all_sim_outputs, X, f)
 
-Get the pointwise sd of the trajectories for the specified compartment across all simulation runs.
+Applies function f at each time step to all counts of compartment X.
+
+# Example
+```
+compartment_trajectory_summary(all_sim_output, "S", mean) # compute average trajectory for compartment S
+```
 """
-function trajectory_sd(all_sim_outputs, compartment)
-    all_trajs_raw = compartment_trajectory.(all_sim_outputs, compartment)
-    all_trajs = [all_trajs_raw[i][j] for i in 1:M, j in 1:(n_days + 1)]
-    
-    traj_summaries = trajectory_summary(all_trajs)
-    traj_sds = traj_summaries["sds"]
+function compartment_trajectory_summary(all_sim_outputs, X, f)
+    trajectories = complete_compartment_trajectories(all_sim_outputs, X)
+    summary = [f(trajectories[i,:]) for i in 1:(n_days + 1)]
 end
 
+
+"""
+trajectory_summaries(all_sim_outputs)
+
+Summarizes every compartment using function f. Specifically, for every compartment, 
+    f is applied at each time step to all counts of the compartment.
+
+Output: A data frame with rows indexing time and columns indexing compartments.
+
+# Example
+```
+trajectory_summaries(all_sim_output, mean) # compute average trajectories
+```
+"""
+function trajectory_summaries(all_sim_outputs, f)
+    @pipe all_compartments |>
+        map(X -> compartment_trajectory_summary(all_sim_outputs, X, f), _) |>   # Apply f to each compartment
+        reduce(hcat, _) |>                                                      # Staple summaries together
+        DataFrame(_, all_compartments)                                          # Convert result to a data frame
+end
 
 #####################################################################
 ### Building our objects after importing the data from a CSV file ###

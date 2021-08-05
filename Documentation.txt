@@ -1,3 +1,14 @@
+Epidemic Model: Susceptible
+                Exposed
+                Asymptomatic
+                Infectious
+                Removed
+
+            S → E → A → R
+                  ↘ I ↗
+
+
+
 
 Important Objects:
 status is a wrapper containing "classes" and "students"

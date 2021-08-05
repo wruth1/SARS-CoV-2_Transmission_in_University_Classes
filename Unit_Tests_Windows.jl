@@ -436,42 +436,6 @@ using Test
 end
 
 @testset "Compartment Counts" begin
-    @testset "classwise_compartment_count" begin
-        @testset "Basic" begin
-            ### Construct a sample class
-            S = collect(1:5)
-            E = collect(6:10)
-            A = collect(11:15)
-            I = collect(16:20)
-            R = collect(21:25)
-
-            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
-
-            @test classwise_compartment_count(a_class, "S") == 5
-            @test classwise_compartment_count(a_class, "E") == 5
-            @test classwise_compartment_count(a_class, "A") == 5
-            @test classwise_compartment_count(a_class, "I") == 5
-            @test classwise_compartment_count(a_class, "R") == 5
-        end
-
-        @testset "Empty Class" begin
-            ### Construct an empty class
-            S = Vector{Any}(nothing, 0)
-            E = Vector{Any}(nothing, 0)
-            A = Vector{Any}(nothing, 0)
-            I = Vector{Any}(nothing, 0)
-            R = Vector{Any}(nothing, 0)
-
-            a_class = Dict{String,Any}("S" => S, "E" => E, "A" => A, "I" => I, "R" => R)
-
-            @test classwise_compartment_count(a_class, "S") == 0
-            @test classwise_compartment_count(a_class, "E") == 0
-            @test classwise_compartment_count(a_class, "A") == 0
-            @test classwise_compartment_count(a_class, "I") == 0
-            @test classwise_compartment_count(a_class, "R") == 0
-        end
-    end
-
     @testset "status_compartment_count" begin
         @testset "Basic" begin
             ### Construct a sample class
