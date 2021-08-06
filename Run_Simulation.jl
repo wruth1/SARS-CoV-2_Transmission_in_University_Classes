@@ -18,14 +18,42 @@ num_threads = max_threads - 1 # Leave one thread available while code is running
 ### Initialize parameters ###
 #############################
 
+################################################! Fix errors with package loading
+Pkg.up("Roots")
+Pkg.up("StaticArrays")
+Pkg.up("SentinelArrays")
+Pkg.up("Clustering")
+Pkg.up("StaticArrays")
+Pkg.up("PlotlyJS")
+
+Pkg.add("StaticArrays")
+Pkg.add("SentinelArrays")
+Pkg.add("Clustering")
+Pkg.add("StaticArrays")
+Pkg.add("PlotlyJS")
+Pkg.add("PlotlyBase")
+
+Pkg.precompile()
+
+using Plotly
+################################################!
+
+
 const n_days = 90 # Number of days in a term. This might change between terms
 const week_length = 7
 
 const all_compartments = ["S", "E", "A", "I", "R"]
 const num_compartments = length(all_compartments)
 
-const all_infect_param_As = ()
+const all_infect_param_I = [0.1, 0.5, 1]
+const all_infect_param_A = [0.5, 0.75, 1] .* all_infect_param_I'
+const all_advance_prob_E = 1 ./ [4, 5.2, 6]
+const all_E_to_A_prob = [0.16, 0.25, 0.5]
+const all_disease_progress_prob = [0.5, 0.75, 0.9]
+const all_recovery_prob_A = [1/5, 1/7, 1/9] .* all_disease_progress_prob'
+const all_recovery_prob_I = [1/10, 1/11.8, 1/15]
 
+#=
 const infect_param_I = 1 # Proportionality constant for infection probability from symptomatic compartment
 const infect_param_A = 0.75 * infect_param_I # Proportionality constant for infection probability from 
                                              # asymptomatic compartment (Johansson et al. 2021)
@@ -34,7 +62,7 @@ const E_to_A_prob = 0.16 # Probability that an advancement from E is to A (Byamb
 const disease_progress_prob = 0.5 # Probability of an A moving to I on a particular day (modified heavily from Anderson et al. 2021)
 const recovery_prob_A = disease_progress_prob / 9 # Probability of an A moving to R on a particular day (One value from Public Health Ontatio 2021)
 const recovery_prob_I = 1/11.8 # Probability of an I moving to R on a particular day (Public Health Ontario 2021)
-
+=#
 n_initial_cases = 10
 
 ### Useful global values

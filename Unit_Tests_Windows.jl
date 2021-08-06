@@ -198,6 +198,7 @@ using Test
         end
     end
 
+    #=
             @testset "Update_A!" begin
         @testset "Basic" begin
             recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
@@ -272,6 +273,7 @@ using Test
             @test issetequal(A_old, R_diff)
         end
     end
+    =#
 
             @testset "Update_I!" begin
         @testset "Basic" begin
