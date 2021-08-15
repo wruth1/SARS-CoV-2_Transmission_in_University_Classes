@@ -1,0 +1,10 @@
+name: learn-github-actions-(BROKEN)
+on: [push]
+jobs:
+  a_job:
+    name: A Job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print something
+        run: |
+          julia Unit_Tests_Windows.jl
