@@ -131,8 +131,8 @@ Extracts all trajectories for compartment X from all_sim_outputs.
 
 Output: A matrix with rows indexing time and columns indexing simulation runs.
 """
-function complete_compartment_trajectories(all_sim_outouts, X)
-    @pipe all_sim_outouts |>
+function complete_compartment_trajectories(all_sim_outputs, X)
+    @pipe all_sim_outputs |>
         map(sim_output -> sim_output[!,X], _) |>    # Extract trajectories for this compartment
         reduce(hcat, _)                             # Staple trajectories together
 end
@@ -247,39 +247,75 @@ function incorporate_all_students!(classes, students)
 end
 
 
+# ---------------------------------------------------------------------------- #
+#                Remove all classes above a specified threshold                #
+# ---------------------------------------------------------------------------- #
 
+"""
+    get_class_sizes(status)
 
-
-
-
-
-
-
-
-
-
-
-##########################
-### Here be dragons!!! ###
-##########################
-
-### Trying to write a function which takes a variable and adds its value to a dictionary with key equal to the variable's name
-### This doesn't seem like a thing anyone wants to do
-
-#= 
-# A macro which returns the name of an object
-macro get_name(x)
-    string(x)
+Get all class sizes.
+"""
+function get_class_sizes(status)
+    map(X -> X["size"], status["classes"])
 end
 
-function push_dict!(x)
+"""
+Remove class i from the provided student, making sure to adjust indices of other classes as appropriate.
+"""
+function remove_class_from_student!(student, i)
+    this_classes = student["classes"]
+    # Remove class i if present
+    filter!(X -> X != i, this_classes) ###! Warning: i is an index to the classes component of status, not to this_classes
+    # Subtract 1 from class indices if larger than i
+    map!(x -> x > i ? x - 1 : x, this_classes, this_classes)
 
-    name = @get_name($x)
-    name
+    return student
 end
 
-function f()
-    Main.@locals()
+
+"""
+Remove class i from status, including from all students.
+"""
+function remove_class!(status, i)
+    classes = status["classes"]
+    students = status["students"]
+
+    # Remove class i from classes
+    deleteat!(classes, i)
+
+    # Remove class i from students
+    remove_class_from_student!.(students, i)
+
+    return status
 end
 
-f(x) = @locals() =#
+"""
+Remove all classes from status with size greater than the specified threshold.
+
+Warning: This function NEEDS to be tested!!!! It has given inconsistent results when called vs run line-by-line in REPL
+"""
+function remove_large_classes!(status, threshold) ###############! Warning!!!!! See function definition.
+    classes = status["classes"]
+    to_remove = findall(X -> X["size"] > threshold, classes)
+
+    for i in reverse(to_remove) ### Removing classes in recreasing order avoids each iteration ruining subsequent indices
+        remove_class!(status, i)
+    end
+end
+
+w_classes = w["classes"]
+w_students = w["students"]
+
+e_classes = e["classes"]
+e_students = e["students"]
+
+
+w_enrollments = map(X -> X["classes"], w_students)
+e_enrollments = map(X -> X["classes"], e_students)
+
+enrollment_comparisons = [w_enrollments[i] == e_enrollments[i] for i in eachindex(w_enrollments)]
+
+
+
+

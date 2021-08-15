@@ -190,20 +190,20 @@ end
 
 
 # Runs a single time step and update status with parameters drawn from global scope
-function one_step!(status, day)
-    status_new = status
-    status_old = deepcopy(status)
+"""
+    one_step!(status_new, status_old, day)
 
-    update_S!(status_new, status_old, day)
-    update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
-    update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
-    update_I!(status_new, status_old, recovery_prob_I)
+Runs a single time step and update status_new using status_old as reference and parameters drawn from global scope
+
+"""
+function one_step!(status_new, status_old, day)
+    @timeit timer "update_S!" update_S!(status_new, status_old, day)
+    @timeit timer "update_E!" update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
+    @timeit timer "update_A!" update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
+    @timeit timer "update_I!" update_I!(status_new, status_old, recovery_prob_I)
     
-    update_risk!(status_new, infect_param_A, infect_param_I)
-
-    status = status_new
+    @timeit timer "update_risk!" update_risk!(status_new, infect_param_A, infect_param_I)
 end
-
 
 """
     one_term(status_initial, n_days)
@@ -227,19 +227,22 @@ function one_term(status_initial, n_days)
     # M=1 #! Only un-comment for testing outside of run_sim
     # @showprogress "Running simulation $i of $M..." for j ∈ 1:n_days
     for j ∈ 1:n_days
-            status_new = deepcopy(status_old)
-        one_step!(status_new, day)
+        @timeit timer "Copy status" status_new = deepcopy(status_old)
+        @timeit timer "one_step!" one_step!(status_new, status_old, day)
 
-        this_compartment_counts = all_compartment_counts(status_new)
+        @timeit timer "Get compartment counts" this_compartment_counts = all_compartment_counts(status_new)
         trajectories[j + 1,:] = this_compartment_counts
 
         status_old = status_new
 
+        # GC.gc()
         day = (day % week_length) + 1
     end
 
     trajectories
 end
+
+2
 
 ### Infects a few initial cases and runs the simulation on a copy of status
 ### ToDo: Needs unit tests
@@ -285,7 +288,14 @@ Run M simulation replicates with the specified parameter values on the provided 
 """
 function one_parameter_set(status_raw, M, 
     infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
-    all_sim_outputs = @showprogress "Running simulation..." [run_sim(status_raw, n_initial_cases, n_days) for i in 1:M];
+    # all_sim_outputs = @showprogress "Running simulation..." [run_sim(status_raw, n_initial_cases, n_days) for i in 1:M];
+    all_sim_outputs = Vector{Any}(undef, M)
+    @showprogress for i in 1:M
+    #@turbo for i in 1:M
+        all_sim_outputs[i] = run_sim(status_raw, n_initial_cases, n_days)
+    end
+
+    return all_sim_outputs
 end
 
 

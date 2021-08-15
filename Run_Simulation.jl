@@ -5,6 +5,8 @@ using Statistics # For faster computation of standard deviations
 using ProgressMeter # To track progress for long loops
 using Pipe # Improved pipe operator
 using JLD # Save and load variables
+using TimerOutputs # Diagnostic programming tool
+using LoopVectorization # For the @turbo macro
 
 
 Random.seed!(21131346)
@@ -17,26 +19,6 @@ num_threads = max_threads - 1 # Leave one thread available while code is running
 #############################
 ### Initialize parameters ###
 #############################
-
-################################################! Fix errors with package loading
-Pkg.up("Roots")
-Pkg.up("StaticArrays")
-Pkg.up("SentinelArrays")
-Pkg.up("Clustering")
-Pkg.up("StaticArrays")
-Pkg.up("PlotlyJS")
-
-Pkg.add("StaticArrays")
-Pkg.add("SentinelArrays")
-Pkg.add("Clustering")
-Pkg.add("StaticArrays")
-Pkg.add("PlotlyJS")
-Pkg.add("PlotlyBase")
-
-Pkg.precompile()
-
-using Plotly
-################################################!
 
 
 const n_days = 90 # Number of days in a term. This might change between terms
@@ -52,6 +34,14 @@ const all_E_to_A_prob = [0.16, 0.25, 0.5]
 const all_disease_progress_prob = [0.5, 0.75, 0.9]
 const all_recovery_prob_A = [1/5, 1/7, 1/9] .* all_disease_progress_prob'
 const all_recovery_prob_I = [1/10, 1/11.8, 1/15]
+
+infect_param_I = all_infect_param_I[1]
+infect_param_A = all_infect_param_A[1]
+advance_prob_E = all_advance_prob_E[1]
+E_to_A_prob = all_E_to_A_prob[1]
+disease_progress_prob = all_disease_progress_prob[1]
+recovery_prob_A = all_recovery_prob_A[1]
+recovery_prob_I = all_recovery_prob_I[1]
 
 #=
 const infect_param_I = 1 # Proportionality constant for infection probability from symptomatic compartment
@@ -70,14 +60,14 @@ advance_prob_A = 1 - (1 - disease_progress_prob) * (1 - recovery_prob_A) # Proba
 A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       # Probability of moving to R conditional on leaving A
 
 
-
 include("Helper_Functions.jl");
 include("Update_Functions.jl");
 include("Read_Data.jl"); 
 
-######################
-### Run Simulation ###
-######################
+
+# ---------------------------------------------------------------------------- #
+#                                Run Simulation                                #
+# ---------------------------------------------------------------------------- #
 
 ### Raw status because it does not yet have classwise risks. 
 ### Either compute and store (slow), or read from disk (fast)
@@ -85,8 +75,25 @@ include("Read_Data.jl");
 # save("Data/Objects/Status_Raw.jld", "status_raw", status_raw)
 status_raw = load("Data/Objects/Status_Raw.jld", "status_raw")
 
+# --------------------- Extract some useful global values -------------------- #
+num_classes = length(status_raw["classes"])
+num_students = length(status_raw["students"])
+
+timer = TimerOutput()
+reset_timer!(timer)
+
+include("Helper_Functions.jl");
+include("Update_Functions.jl");
+include("Read_Data.jl"); 
+
 all_sim_outputs = one_parameter_set(status_raw, M, 
 infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
+
+show(timer)
+
+
+
+
 
 ##################################
 ### Process simulation results ###
