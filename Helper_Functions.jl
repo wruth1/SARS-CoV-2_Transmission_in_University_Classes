@@ -81,7 +81,6 @@ function compute_risk!(class, infect_param_A, infect_param_I)
 end
 
 
-
 ###########################################
 ### Extract information from simulation ###
 ###########################################
@@ -292,10 +291,8 @@ end
 
 """
 Remove all classes from status with size greater than the specified threshold.
-
-Warning: This function NEEDS to be tested!!!! It has given inconsistent results when called vs run line-by-line in REPL
 """
-function remove_large_classes!(status, threshold) ###############! Warning!!!!! See function definition.
+function remove_large_classes!(status, threshold) 
     classes = status["classes"]
     to_remove = findall(X -> X["size"] > threshold, classes)
 
@@ -304,18 +301,18 @@ function remove_large_classes!(status, threshold) ###############! Warning!!!!! 
     end
 end
 
-w_classes = w["classes"]
-w_students = w["students"]
-
-e_classes = e["classes"]
-e_students = e["students"]
-
-
-w_enrollments = map(X -> X["classes"], w_students)
-e_enrollments = map(X -> X["classes"], e_students)
-
-enrollment_comparisons = [w_enrollments[i] == e_enrollments[i] for i in eachindex(w_enrollments)]
 
 
 
+# ---------------------------------------------------------------------------- #
+#                           General utility functions                          #
+# ---------------------------------------------------------------------------- #
 
+"""
+Create a vector containing all combinations of elements in arguments. Takes any number of arguments.
+
+Note: This is the same as the expand.grid function in R.
+"""
+function expand_grid(X...)
+    vec(collect(Base.product(X...)))
+end

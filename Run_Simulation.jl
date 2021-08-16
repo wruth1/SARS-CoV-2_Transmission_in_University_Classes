@@ -1,12 +1,12 @@
 using Plots
-using Random, Distributions # For Update_Functions.jl
-using DataFrames, CSV # For Read_Data.jl
-using Statistics # For faster computation of standard deviations
-using ProgressMeter # To track progress for long loops
-using Pipe # Improved pipe operator
-using JLD # Save and load variables
-using TimerOutputs # Diagnostic programming tool
-using LoopVectorization # For the @turbo macro
+using Random, Distributions     # For Update_Functions.jl
+using DataFrames, CSV           # For Read_Data.jl
+using Statistics                # For faster computation of standard deviations
+using ProgressMeter             # To track progress for long loops
+using Pipe                      # Improved pipe operator
+using JLD                       # Save and load variables
+using LoopVectorization         # For the @turbo macro
+using Infinity                  # Adds the numbers ∞ and -∞
 
 
 Random.seed!(21131346)
@@ -20,20 +20,26 @@ num_threads = max_threads - 1 # Leave one thread available while code is running
 ### Initialize parameters ###
 #############################
 
+# ----------------------------- Fixed parameters ----------------------------- #
+if !@isdefined n_days; const n_days = 90; end # Number of days in a term. This might change between terms
+if !@isdefined week_length; const week_length = 7; end
+if !@isdefined all_compartments; const all_compartments = ["S", "E", "A", "I", "R"]; end
+if !@isdefined num_compartments; const num_compartments = length(all_compartments); end
 
-const n_days = 90 # Number of days in a term. This might change between terms
-const week_length = 7
+# -------------- Containers for parameters with multiple values -------------- #
+if !@isdefined all_infect_param_I; const all_infect_param_I = [0.1, 0.5, 1]; end
+if !@isdefined all_infect_param_A; const all_infect_param_A = [0.5, 0.75, 1] .* all_infect_param_I'; end
+if !@isdefined all_advance_prob_E; const all_advance_prob_E = 1 ./ [4, 5.2, 6]; end
+if !@isdefined all_E_to_A_prob; const all_E_to_A_prob = [0.16, 0.25, 0.5]; end
+if !@isdefined all_disease_progress_prob; const all_disease_progress_prob = [0.5, 0.75, 0.9]; end
+if !@isdefined all_recovery_prob_A; const all_recovery_prob_A = [1/5, 1/7, 1/9] .* all_disease_progress_prob'; end
+if !@isdefined all_recovery_prob_I; const all_recovery_prob_I = [1/10, 1/11.8, 1/15]; end
+if !@isdefined all_thresholds; const all_thresholds = [20, 50, 100, ∞]; end # Maximum class sizes
 
-const all_compartments = ["S", "E", "A", "I", "R"]
-const num_compartments = length(all_compartments)
 
-const all_infect_param_I = [0.1, 0.5, 1]
-const all_infect_param_A = [0.5, 0.75, 1] .* all_infect_param_I'
-const all_advance_prob_E = 1 ./ [4, 5.2, 6]
-const all_E_to_A_prob = [0.16, 0.25, 0.5]
-const all_disease_progress_prob = [0.5, 0.75, 0.9]
-const all_recovery_prob_A = [1/5, 1/7, 1/9] .* all_disease_progress_prob'
-const all_recovery_prob_I = [1/10, 1/11.8, 1/15]
+# ----------- Container for all combinations of varying parameters ----------- #
+if !@isdefined all_parameters; const all_parameters = expand_grid(all_infect_param_I, all_infect_param_A, all_advance_prob_E,
+    all_E_to_A_prob, all_disease_progress_prob, all_recovery_prob_A, all_recovery_prob_I, all_thresholds); end
 
 infect_param_I = all_infect_param_I[1]
 infect_param_A = all_infect_param_A[1]
@@ -64,6 +70,12 @@ include("Helper_Functions.jl");
 include("Update_Functions.jl");
 include("Read_Data.jl"); 
 
+a = collect(1:5)
+b = collect(6:10)
+
+q = vec(collect(Base.product(a, b)))
+
+a = 20*80000/(3600 * 24 * 12)
 
 # ---------------------------------------------------------------------------- #
 #                                Run Simulation                                #
@@ -75,23 +87,25 @@ include("Read_Data.jl");
 # save("Data/Objects/Status_Raw.jld", "status_raw", status_raw)
 status_raw = load("Data/Objects/Status_Raw.jld", "status_raw")
 
+# ----------- Create status objects with different max class sizes ----------- #
+all_status_raws = Dict{Any, Any}()
+for i in eachindex(all_thresholds)
+    this_status_raw = deepcopy(status_raw)
+    this_threshold = all_thresholds[i]
+    remove_large_classes!(this_status_raw, this_threshold)
+    all_status_raws[this_threshold] = this_status_raw
+end
+
+
 # --------------------- Extract some useful global values -------------------- #
 num_classes = length(status_raw["classes"])
 num_students = length(status_raw["students"])
 
-timer = TimerOutput()
-reset_timer!(timer)
-
-include("Helper_Functions.jl");
-include("Update_Functions.jl");
-include("Read_Data.jl"); 
 
 all_sim_outputs = one_parameter_set(status_raw, M, 
 infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
 
-show(timer)
-
-
+1
 
 
 
@@ -99,43 +113,43 @@ show(timer)
 ### Process simulation results ###
 ##################################
 
-### Plot mean trajectory for I with uncertainty
-I_means = compartment_trajectory_summary(all_sim_outputs, "I", mean)
-I_sds = compartment_trajectory_summary(all_sim_outputs, "I", std)
+# ### Plot mean trajectory for I with uncertainty
+# I_means = compartment_trajectory_summary(all_sim_outputs, "I", mean)
+# I_sds = compartment_trajectory_summary(all_sim_outputs, "I", std)
 
 
-gr()
-plot(0:n_days, I_means, ribbon=I_sds, fillalpha=0.5, label="Mean I Trajectory with ± 1 SD")
+# gr()
+# plot(0:n_days, I_means, ribbon=I_sds, fillalpha=0.5, label="Mean I Trajectory with ± 1 SD")
 
 
-### Plot mean trajectories for all compartments
-mean_trajectories = trajectory_summaries(all_sim_outputs, mean)
+# ### Plot mean trajectories for all compartments
+# mean_trajectories = trajectory_summaries(all_sim_outputs, mean)
 
-plotly()
-p = plot();
-for X in all_compartments
-    plot!(p, 0:n_days, mean_trajectories[:, X], label=X);
-end
-plot(p)
-
-
-
-### Plot mean trajectories for all compartments with uncertainty
-sd_trajectories = trajectory_summaries(all_sim_outputs, std)
+# plotly()
+# p = plot();
+# for X in all_compartments
+#     plot!(p, 0:n_days, mean_trajectories[:, X], label=X);
+# end
+# plot(p)
 
 
-gr()
 
-p2 = plot();
-for X in all_compartments
-    plot!(p2, 0:n_days, mean_trajectories[:, X], ribbon=sd_trajectories[:, X], fillalpha=0.5, label=X);
-end
-plot(p2)
+# ### Plot mean trajectories for all compartments with uncertainty
+# sd_trajectories = trajectory_summaries(all_sim_outputs, std)
 
 
-### Add vertical lines for weekends
-Fridays = (0:5) * 7 .+ 5
-Sundays = Fridays .+ 2
-weekends = vcat(Fridays, Sundays)
+# gr()
 
-vline!(p2, weekends, label="Weekends")
+# p2 = plot();
+# for X in all_compartments
+#     plot!(p2, 0:n_days, mean_trajectories[:, X], ribbon=sd_trajectories[:, X], fillalpha=0.5, label=X);
+# end
+# plot(p2)
+
+
+# ### Add vertical lines for weekends
+# Fridays = (0:5) * 7 .+ 5
+# Sundays = Fridays .+ 2
+# weekends = vcat(Fridays, Sundays)
+
+# vline!(p2, weekends, label="Weekends")

@@ -38,6 +38,10 @@ function update_S!(status_new, status_old, day)
         this_class_days = this_class["days"]
         in(day, this_class_days) ? nothing : continue # Structure is conditional ? true : false
 
+        # Skip this iteration if no risk of infection
+        this_risk = this_class["risk"]
+        this_risk != 0 ? nothing : continue
+
         # Get indices of new exposeds
         new_cases = get_new_cases(this_class)
 
@@ -197,12 +201,12 @@ Runs a single time step and update status_new using status_old as reference and 
 
 """
 function one_step!(status_new, status_old, day)
-    @timeit timer "update_S!" update_S!(status_new, status_old, day)
-    @timeit timer "update_E!" update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
-    @timeit timer "update_A!" update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
-    @timeit timer "update_I!" update_I!(status_new, status_old, recovery_prob_I)
+    update_S!(status_new, status_old, day)
+    update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
+    update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
+    update_I!(status_new, status_old, recovery_prob_I)
     
-    @timeit timer "update_risk!" update_risk!(status_new, infect_param_A, infect_param_I)
+    update_risk!(status_new, infect_param_A, infect_param_I)
 end
 
 """
@@ -223,19 +227,16 @@ function one_term(status_initial, n_days)
     # Initialize status_old
     status_old = status_initial
 
-    # i=1 #! Only un-comment for testing outside of run_sim
-    # M=1 #! Only un-comment for testing outside of run_sim
-    # @showprogress "Running simulation $i of $M..." for j ∈ 1:n_days
     for j ∈ 1:n_days
-        @timeit timer "Copy status" status_new = deepcopy(status_old)
-        @timeit timer "one_step!" one_step!(status_new, status_old, day)
+        # status_new = deepcopy(status_old) # This doesn't appear to be necessary, and takes a lot of time to run.
+        status_new = status_old
+        one_step!(status_new, status_old, day)
 
-        @timeit timer "Get compartment counts" this_compartment_counts = all_compartment_counts(status_new)
+        this_compartment_counts = all_compartment_counts(status_new)
         trajectories[j + 1,:] = this_compartment_counts
 
         status_old = status_new
 
-        # GC.gc()
         day = (day % week_length) + 1
     end
 
