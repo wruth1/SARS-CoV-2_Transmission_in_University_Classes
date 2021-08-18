@@ -1,3 +1,5 @@
+###ToDo Fix indexing after classes and students have been removed.
+
 using Plots
 using Random, Distributions     # For Update_Functions.jl
 using DataFrames, CSV           # For Read_Data.jl
@@ -10,7 +12,7 @@ using Infinity                  # Adds the numbers ∞ and -∞
 
 
 Random.seed!(21131346)
-M = 10 # Number of times to replicate each parameter combination
+M = 2 # Number of times to replicate each parameter combination
 
 max_threads = Threads.nthreads()
 num_threads = max_threads - 1 # Leave one thread available while code is running
@@ -84,8 +86,20 @@ A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       
 # ------- Either compute and store (slow), or read from disk (fast-ish) ------ #
 # ----------- Note: In latter case, only run if not already defined ---------- #
 # status_raw = read_data("Data/2019-Fall.csv", false) 
+# classes_raw = status_raw["classes"]
+# filter!(X -> X["size"] > 1, classes_raw)    # Remove classes with only 1 student
 # save("Data/Objects/Status_Raw.jld", "status_raw", status_raw)
-if !@isdefined status_raw; status_raw = load("Data/Objects/Status_Raw.jld", "status_raw"); end
+if !@isdefined status_raw
+    status_raw = load("Data/Objects/Status_Raw.jld", "status_raw")
+    classes_raw = status_raw["classes"]
+    
+    # -------------------- Remove classes with only 1 student -------------------- #
+    delete_tiny_classes!(status_raw)
+end
+
+
+
+
 
 # ----------- Create status objects with different max class sizes ----------- #
 # ------------------ Note: Only runs if not already defined ------------------ #
@@ -94,10 +108,23 @@ if !@isdefined all_status_raws
     for i in eachindex(all_thresholds)
         this_status_raw = deepcopy(status_raw)
         this_threshold = all_thresholds[i]
-        remove_large_classes!(this_status_raw, this_threshold)
+        delete_large_classes(this_status_raw, this_threshold)
+        delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
         all_status_raws[this_threshold] = this_status_raw
     end
 end
+
+# --------------------- Extract some useful global values -------------------- #
+all_num_students = Dict{Any, Int16}()
+all_num_classes = Dict{Any, Int16}()
+for this_threshold in all_thresholds 
+    this_status = all_status_raws[this_threshold]
+    all_num_students[this_threshold] = length(this_status["students"])
+    all_num_classes[this_threshold] = length(this_status["classes"])
+end
+
+
+
 
 # -------------- Pool of random seeds for use within simulation -------------- #
 # ---- Note: UInt32 is 32-bit unsigned integer, represented in hexadecimal --- #
@@ -112,8 +139,6 @@ all_sim_outputs = Vector{Any}(undef, length(all_parameters))
 N = 100
 meter = Progress(N);    # Create progress meter
 update!(meter, 0)       # Initialize progress of meter
-jj = Threads.Atomic{Int}(0) # Create a numeric progress indicator. Arithmetic on Atomic variables is forced to be thread-safe
-my_lock = Threads.ReentrantLock()   # Create a lock to prevent thread collisions when updating meter
 
 # for ii in eachindex(all_parameters)
 Threads.@threads for ii in 1:N
@@ -134,6 +159,8 @@ Threads.@threads for ii in 1:N
     threshold = this_parameters[8]
 
     this_status_raw = all_status_raws[threshold]
+    num_students = all_num_students[threshold]
+    num_classes = all_num_classes[threshold]
 
 
     # ------------------- Run this iteration and store results ------------------- #

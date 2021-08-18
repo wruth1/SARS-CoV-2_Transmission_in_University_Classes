@@ -81,9 +81,9 @@ function compute_risk!(class, infect_param_A, infect_param_I)
 end
 
 
-###########################################
-### Extract information from simulation ###
-###########################################
+# ---------------------------------------------------------------------------- #
+#                      Extract information from simulation                     #
+# ---------------------------------------------------------------------------- #
 
 # Get the number of students in compartment X in the provided class
 function classwise_compartment_count(class, X)
@@ -154,23 +154,33 @@ end
 
 
 """
-trajectory_summaries(all_sim_outputs)
+trajectory_summaries(sim_outputs, f)
 
 Summarizes every compartment using function f. Specifically, for every compartment, 
-    f is applied at each time step to all counts of the compartment.
+f is applied at each time step to all counts of the compartment.
 
 Output: A data frame with rows indexing time and columns indexing compartments.
 
 # Example
 ```
-trajectory_summaries(all_sim_output, mean) # compute average trajectories
+trajectory_summaries(sim_outputs, mean) # compute average trajectories
 ```
 """
-function trajectory_summaries(all_sim_outputs, f)
+function trajectory_summaries(sim_outputs, f)
     @pipe all_compartments |>
-        map(X -> compartment_trajectory_summary(all_sim_outputs, X, f), _) |>   # Apply f to each compartment
+        map(X -> compartment_trajectory_summary(sim_outputs, X, f), _) |>       # Apply f to each compartment
         reduce(hcat, _) |>                                                      # Staple summaries together
         DataFrame(_, all_compartments)                                          # Convert result to a data frame
+end
+
+"""
+Get the average number of people affected by the disease. I.e. Average of N - S_final 
+"""
+function disease_scope(sim_outputs)
+    mean_S_final =  @pipe sim_outputs |>
+                    trajectory_summaries(_, mean) |>
+                    X -> X[end, "S"]
+    num_students - mean_S_final
 end
 
 #####################################################################
@@ -260,23 +270,50 @@ function get_class_sizes(status)
 end
 
 """
-Remove class i from the provided student, making sure to adjust indices of other classes as appropriate.
+Removes i from X and decrement values in X greater than i.
 """
-function remove_class_from_student!(student, i)
-    this_classes = student["classes"]
-    # Remove class i if present
-    filter!(X -> X != i, this_classes) ###! Warning: i is an index to the classes component of status, not to this_classes
-    # Subtract 1 from class indices if larger than i
-    map!(x -> x > i ? x - 1 : x, this_classes, this_classes)
-
-    return student
+function delete_in_list!(X::AbstractVector{T}, i::T) where T<:Int
+    @pipe X |>
+    filter!(y -> y != i, _) |>
+    map!(y -> y > i ? y-1 : y, _, _)
 end
+
+
+"""
+Update the provided student to account for deleting class i. Specifically, remove class i and update indices of any classes after i.
+"""
+function delete_class_in_student(student, i)
+    this_classes = student["classes"]
+    
+    delete_in_list!(this_classes, i)
+
+
+
+    # # Remove class i if present
+    # filter!(X -> X != i, this_classes) ###! Warning: i is an index to the classes component of status, not to this_classes
+    # # Subtract 1 from class indices if larger than i
+    # map!(x -> x > i ? x - 1 : x, this_classes, this_classes)
+
+    # return student
+end
+
+"""
+Update the provided class to account for deleting student i. Specifically, remove student i and update indices of any students after i.
+"""
+function delete_student_in_class!(class, i)
+    this_student = student["classes"]
+    delete_in_list!(this_student, i)
+end
+
+
+
+
 
 
 """
 Remove class i from status, including from all students.
 """
-function remove_class!(status, i)
+function delete_class!(status, i)
     classes = status["classes"]
     students = status["students"]
 
@@ -284,22 +321,73 @@ function remove_class!(status, i)
     deleteat!(classes, i)
 
     # Remove class i from students
-    remove_class_from_student!.(students, i)
+    delete_class_in_student.(students, i)
 
     return status
 end
 
 """
-Remove all classes from status with size greater than the specified threshold.
+Remove student i from status, including from all classes.
 """
-function remove_large_classes!(status, threshold) 
+function delete_student!(status, i)
     classes = status["classes"]
-    to_remove = findall(X -> X["size"] > threshold, classes)
+    students = status["students"]
 
-    for i in reverse(to_remove) ### Removing classes in recreasing order avoids each iteration ruining subsequent indices
-        remove_class!(status, i)
+    # Remove student i from students
+    deleteat!(students, i)
+
+    # Remove student i from classes
+    delete_student_in_class!.(classes, i)
+
+    return status
+end
+
+
+"""
+Delete students with no classes.
+"""
+function delete_isolated_students!(status)
+    students_to_remove = findall(X -> isempty(X["classes"]), students)
+
+    for i in reverse(students_to_remove)
+        delete_student!(status, i)
     end
 end
+
+"""
+Delete classes with 1 or 0 students. Optionally, also remove students with no remaining classes.
+"""
+function delete_tiny_classes!(status, adjust_students=true)
+    classes_to_remove = findall(X -> X["size"] <= 1, classes)
+
+    for i in reverse(classes_to_remove) ### Removing classes in recreasing order avoids each iteration ruining subsequent indices
+        delete_class!(status, i)
+    end
+
+    # ----------------- Remove students with no remaining classes ---------------- #
+    if adjust_students; delete_isolated_students!(status); end
+end
+
+
+"""
+Remove all classes from status with size greater than the specified threshold. 
+Optionally, also remove students with no remaining classes.
+"""
+function delete_large_classes(status, threshold, adjust_students=true) 
+    classes = status["classes"]
+    students = status["students"]
+
+    classes_to_remove = findall(X -> X["size"] > threshold, classes)
+
+    for i in reverse(classes_to_remove) ### Removing classes in recreasing order avoids each iteration ruining subsequent indices
+        delete_class!(status, i)
+    end
+
+    # ----------------- Remove students with no remaining classes ---------------- #
+    if adjust_students; delete_isolated_students!(status); end
+
+end
+
 
 
 

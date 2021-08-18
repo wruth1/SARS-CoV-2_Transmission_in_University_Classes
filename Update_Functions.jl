@@ -257,8 +257,7 @@ function run_sim(status_raw, n_initial_cases, n_days)
     this_status = deepcopy(status_raw)
 
     ### Introduce a few initial cases
-    n_students = length(this_status["students"])
-    inds_infect = sample(1:n_students, n_initial_cases, replace=false)
+    inds_infect = sample(1:num_students, n_initial_cases, replace=false)
     change_compartment!.(Ref(this_status), inds_infect, "I")
 
     ### Compute classwise risks
@@ -291,7 +290,6 @@ Run M simulation replicates with the specified parameter values on the provided 
 function one_parameter_set(status_raw, M, 
     infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, disease_progress_prob, recovery_prob_A, recovery_prob_I,
     n_initial_cases)
-    # all_sim_outputs = @showprogress "Running simulation..." [run_sim(status_raw, n_initial_cases, n_days) for i in 1:M];
     all_sim_outputs = Vector{Any}(undef, M)
     for i in 1:M
         all_sim_outputs[i] = run_sim(status_raw, n_initial_cases, n_days)
