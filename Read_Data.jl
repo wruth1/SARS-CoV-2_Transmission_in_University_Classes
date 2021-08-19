@@ -1,4 +1,6 @@
-using DataFrames, CSV
+using DataFrames
+using CSV
+using ProgressMeter
 
 """
     read_data(address, add_risk = true)

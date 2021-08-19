@@ -1,4 +1,3 @@
-###ToDo Fix indexing after classes and students have been removed.
 
 using Plots
 using Random, Distributions     # For Update_Functions.jl
@@ -7,7 +6,6 @@ using Statistics                # For faster computation of standard deviations
 using ProgressMeter             # To track progress for long loops
 using Pipe                      # Improved pipe operator
 using JLD                       # Save and load variables
-using LoopVectorization         # For the @turbo macro
 using Infinity                  # Adds the numbers ∞ and -∞
 
 
@@ -82,6 +80,10 @@ A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       
 #                                Run Simulation                                #
 # ---------------------------------------------------------------------------- #
 
+
+
+
+
 # --------- Raw status because it does not yet have classwise risks. --------- #
 # ------- Either compute and store (slow), or read from disk (fast-ish) ------ #
 # ----------- Note: In latter case, only run if not already defined ---------- #
@@ -91,8 +93,7 @@ A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       
 # save("Data/Objects/Status_Raw.jld", "status_raw", status_raw)
 if !@isdefined status_raw
     status_raw = load("Data/Objects/Status_Raw.jld", "status_raw")
-    classes_raw = status_raw["classes"]
-    
+
     # -------------------- Remove classes with only 1 student -------------------- #
     delete_tiny_classes!(status_raw)
 end
@@ -126,6 +127,9 @@ end
 
 
 
+
+
+
 # -------------- Pool of random seeds for use within simulation -------------- #
 # ---- Note: UInt32 is 32-bit unsigned integer, represented in hexadecimal --- #
 all_seeds = rand(UInt32, length(all_parameters))
@@ -147,7 +151,7 @@ Threads.@threads for ii in 1:N
     Random.seed!(this_seed)
 
     # ---------------- Extract parameter values for this iteration --------------- #
-    this_parameters = all_parameters[ii]
+    this_parameters = all_parameters[end - ii]
 
     infect_param_I = this_parameters[1]
     infect_param_A = this_parameters[2]
@@ -211,6 +215,8 @@ end
 ##################################
 ### Process simulation results ###
 ##################################
+
+# sim_outputs = all_sim_outputs[1]
 
 # ### Plot mean trajectory for I with uncertainty
 # I_means = compartment_trajectory_summary(sim_outputs, "I", mean)

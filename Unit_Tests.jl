@@ -515,11 +515,64 @@ end
         end
     end
 
-    @testset "compartment_trajectory" begin
-        
-    end
-
             
     
 
+end
+
+@testset "Class and Student Removal" begin
+    # ----------------- Get all indices of classes from students ----------------- #
+    function get_class_indices(student)
+        student["classes"]
+    end
+
+    function get_all_class_indices(status)
+        mapreduce(get_class_indices, vcat, status["students"])
+    end
+
+    # ----------------- Get all indices of students from classes ----------------- #
+    function get_student_indices(class)
+        mapreduce(X -> class[X], vcat, all_compartments)
+    end
+
+    function get_all_student_indices(status)
+        mapreduce(get_student_indices, vcat, status["classes"])
+    end
+
+
+    
+    include("Toy_Simulation.jl")
+    
+    
+    @testset "Consistent initialization of status" begin
+        all_student_indices = get_all_student_indices(status)
+        all_class_indices = get_all_class_indices(status)
+
+        @test all(map(X -> in(X, eachindex(status["students"])), all_student_indices))
+        @test all(map(X -> in(X, eachindex(status["classes"])), all_class_indices))
+    end
+
+    # ------- Create copies of status with different class size thresholds ------- #
+    testing_thresholds = [15, 20, ∞]
+    all_statuses = Dict{Any,Any}()
+    for i in eachindex(testing_thresholds)
+        this_status = deepcopy(status)
+        this_threshold = testing_thresholds[i]
+        delete_large_classes(this_status, this_threshold)
+        delete_tiny_classes!(this_status)   # Also remove any classes with 1 remaining student
+        all_statuses[this_threshold] = this_status
+    end
+
+    # -------- Test for consistent indexing in thresholded status objects -------- #
+    @testset "Consistency of status after thresholding" begin
+        for threshold in testing_thresholds
+            this_status = all_statuses[threshold]
+
+            this_student_indices = get_all_student_indices(this_status)
+            this_class_indices = get_all_class_indices(this_status)
+
+            @test all(map(X -> in(X, eachindex(this_status["students"])), this_student_indices))
+            @test all(map(X -> in(X, eachindex(this_status["classes"])), this_class_indices))
+        end
+    end
 end

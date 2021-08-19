@@ -1,4 +1,7 @@
-using Random, Distributions, ProgressMeter
+using Random
+using Distributions
+using ProgressMeter
+using Infinity
 
 include("Helper_Functions.jl")
 include("Update_Functions.jl")
@@ -8,6 +11,11 @@ Random.seed!(21131346)
 N_classes = 10
 N_students = 50
 week_length = 7
+
+if !@isdefined all_compartments; const all_compartments = ["S", "E", "A", "I", "R"]; end
+
+
+
 
 infect_param_A = 1 # Proportionality constant for infection probability from asymptomatic compartment
 infect_param_I = 1 # Proportionality constant for infection probability from infected compartment

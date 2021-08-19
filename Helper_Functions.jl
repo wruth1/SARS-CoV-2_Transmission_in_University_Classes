@@ -301,8 +301,9 @@ end
 Update the provided class to account for deleting student i. Specifically, remove student i and update indices of any students after i.
 """
 function delete_student_in_class!(class, i)
-    this_student = student["classes"]
-    delete_in_list!(this_student, i)
+    for X in all_compartments
+        delete_in_list!(class[X], i)
+    end
 end
 
 
@@ -347,7 +348,7 @@ end
 Delete students with no classes.
 """
 function delete_isolated_students!(status)
-    students_to_remove = findall(X -> isempty(X["classes"]), students)
+    students_to_remove = findall(X -> isempty(X["classes"]), status["students"])
 
     for i in reverse(students_to_remove)
         delete_student!(status, i)
@@ -358,7 +359,7 @@ end
 Delete classes with 1 or 0 students. Optionally, also remove students with no remaining classes.
 """
 function delete_tiny_classes!(status, adjust_students=true)
-    classes_to_remove = findall(X -> X["size"] <= 1, classes)
+    classes_to_remove = findall(X -> X["size"] <= 1, status["classes"])
 
     for i in reverse(classes_to_remove) ### Removing classes in recreasing order avoids each iteration ruining subsequent indices
         delete_class!(status, i)
