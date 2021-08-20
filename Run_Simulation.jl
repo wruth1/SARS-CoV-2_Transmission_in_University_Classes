@@ -5,7 +5,7 @@ using DataFrames, CSV           # For Read_Data.jl
 using Statistics                # For faster computation of standard deviations
 using ProgressMeter             # To track progress for long loops
 using Pipe                      # Improved pipe operator
-using JLD                       # Save and load variables
+using JLD2                      # Save and load variables
 using Infinity                  # Adds the numbers ∞ and -∞
 
 
@@ -139,8 +139,8 @@ all_seeds = rand(UInt32, length(all_parameters))
 all_sim_outputs = Vector{Any}(undef, length(all_parameters))
 
 
-# N = length(all_parameters)
-N = 100
+N = length(all_parameters)
+# N = 50
 meter = Progress(N);    # Create progress meter
 update!(meter, 0)       # Initialize progress of meter
 
@@ -151,7 +151,7 @@ Threads.@threads for ii in 1:N
     Random.seed!(this_seed)
 
     # ---------------- Extract parameter values for this iteration --------------- #
-    this_parameters = all_parameters[end - ii]
+    this_parameters = all_parameters[ii]
 
     infect_param_I = this_parameters[1]
     infect_param_A = this_parameters[2]
@@ -177,6 +177,13 @@ Threads.@threads for ii in 1:N
     # ---------------------------- Update progress bar --------------------------- #
     next!(meter)
 end
+
+# save("Data/Objects/Sim_Output_M=2.jld", "all_sim_outputs", all_sim_outputs)
+# all_sim_outputs = load("Data/Objects/Sim_Output_M=2.jld", "all_sim_outputs")
+
+JLD2.@save "Data/Objects/M=2.jld2"  all_sim_outputs
+
+JLD2.@load "Data/M=2.jld2"
 
 
 
