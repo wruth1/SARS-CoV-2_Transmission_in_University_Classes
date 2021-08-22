@@ -180,7 +180,13 @@ function disease_scope(sim_outputs)
     mean_S_final =  @pipe sim_outputs |>
                     trajectory_summaries(_, mean) |>
                     X -> X[end, "S"]
-    num_students - mean_S_final
+    
+    # ----------------------- Get total number of students ----------------------- #
+    one_sim_output = sim_outputs[1]
+    one_snapshot = one_sim_output[1,:]
+    this_num_students = sum(one_snapshot)
+
+    this_num_students - mean_S_final
 end
 
 #####################################################################

@@ -81,28 +81,19 @@ A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       
 # ---------------------------------------------------------------------------- #
 
 
-
-
-
+# ---------- Read-in data and remove any classes with only 1 student --------- #
 # --------- Raw status because it does not yet have classwise risks. --------- #
-# ------- Either compute and store (slow), or read from disk (fast-ish) ------ #
+# --------- Either compute and store (slow), or read from disk (fast) -------- #
 # ----------- Note: In latter case, only run if not already defined ---------- #
 # status_raw = read_data("Data/2019-Fall.csv", false) 
-# classes_raw = status_raw["classes"]
-# filter!(X -> X["size"] > 1, classes_raw)    # Remove classes with only 1 student
-# save("Data/Objects/Status_Raw.jld", "status_raw", status_raw)
-if !@isdefined status_raw
-    status_raw = load("Data/Objects/Status_Raw.jld", "status_raw")
-
-    # -------------------- Remove classes with only 1 student -------------------- #
-    delete_tiny_classes!(status_raw)
-end
-
-
+# delete_tiny_classes!(status_raw)
+# @save "Data/Objects/Status_Raw.jld2" status_raw
+@load "Data/Objects/Status_Raw.jld2"
 
 
 
 # ----------- Create status objects with different max class sizes ----------- #
+# ------ Note: Functions to delete classes also delete isolated students ----- #
 # ------------------ Note: Only runs if not already defined ------------------ #
 if !@isdefined all_status_raws
     all_status_raws = Dict{Any,Any}()
@@ -130,92 +121,66 @@ end
 
 
 
-# -------------- Pool of random seeds for use within simulation -------------- #
-# ---- Note: UInt32 is 32-bit unsigned integer, represented in hexadecimal --- #
-all_seeds = rand(UInt32, length(all_parameters))
+# # -------------- Pool of random seeds for use within simulation -------------- #
+# # ---- Note: UInt32 is 32-bit unsigned integer, represented in hexadecimal --- #
+# all_seeds = rand(UInt32, length(all_parameters))
 
 
-# Container to store the output at each iteration
-all_sim_outputs = Vector{Any}(undef, length(all_parameters))
+# # Container to store the output at each iteration
+# all_sim_outputs = Vector{Any}(undef, length(all_parameters))
 
 
-N = length(all_parameters)
-# N = 50
-meter = Progress(N);    # Create progress meter
-update!(meter, 0)       # Initialize progress of meter
+# N = length(all_parameters)
+# # N = 50
+# meter = Progress(N);    # Create progress meter
+# update!(meter, 0)       # Initialize progress of meter
 
-# for ii in eachindex(all_parameters)
-Threads.@threads for ii in 1:N
-    # ----------------- Set seed locally for reproducible results ---------------- #
-    this_seed = all_seeds[ii]
-    Random.seed!(this_seed)
+# # for ii in eachindex(all_parameters)
+# Threads.@threads for ii in 1:N
+#     # ----------------- Set seed locally for reproducible results ---------------- #
+#     this_seed = all_seeds[ii]
+#     Random.seed!(this_seed)
 
-    # ---------------- Extract parameter values for this iteration --------------- #
-    this_parameters = all_parameters[ii]
+#     # ---------------- Extract parameter values for this iteration --------------- #
+#     this_parameters = all_parameters[ii]
 
-    infect_param_I = this_parameters[1]
-    infect_param_A = this_parameters[2]
-    advance_prob_E = this_parameters[3]
-    E_to_A_prob = this_parameters[4]
-    disease_progress_prob = this_parameters[5]
-    recovery_prob_A = this_parameters[6]
-    recovery_prob_I = this_parameters[7]
-    threshold = this_parameters[8]
+#     infect_param_I = this_parameters[1]
+#     infect_param_A = this_parameters[2]
+#     advance_prob_E = this_parameters[3]
+#     E_to_A_prob = this_parameters[4]
+#     disease_progress_prob = this_parameters[5]
+#     recovery_prob_A = this_parameters[6]
+#     recovery_prob_I = this_parameters[7]
+#     threshold = this_parameters[8]
 
-    this_status_raw = all_status_raws[threshold]
-    num_students = all_num_students[threshold]
-    num_classes = all_num_classes[threshold]
-
-
-    # ------------------- Run this iteration and store results ------------------- #
-    sim_outputs = one_parameter_set(this_status_raw, M, 
-    infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, disease_progress_prob, recovery_prob_A, recovery_prob_I, 
-    n_initial_cases)
-
-    all_sim_outputs[ii] = sim_outputs
-
-    # ---------------------------- Update progress bar --------------------------- #
-    next!(meter)
-end
-
-# save("Data/Objects/Sim_Output_M=2.jld", "all_sim_outputs", all_sim_outputs)
-# all_sim_outputs = load("Data/Objects/Sim_Output_M=2.jld", "all_sim_outputs")
-
-JLD2.@save "Data/Objects/M=2.jld2"  all_sim_outputs
-
-JLD2.@load "Data/M=2.jld2"
+#     this_status_raw = all_status_raws[threshold]
+#     num_students = all_num_students[threshold]
+#     num_classes = all_num_classes[threshold]
 
 
+#     # ------------------- Run this iteration and store results ------------------- #
+#     sim_outputs = one_parameter_set(this_status_raw, M, 
+#     infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, disease_progress_prob, recovery_prob_A, recovery_prob_I, 
+#     n_initial_cases)
 
-# using BenchmarkTools
+#     all_sim_outputs[ii] = sim_outputs
 
-
-# @benchmark begin
-#     N = 10000
-#     meter = Progress(N);    # Create progress meter
-#     update!(meter, 0)       # Initialize progress of meter
-#     jj = Threads.Atomic{Int}(0) # Create a numeric progress indicator. Arithmetic on Atomic variables is forced to be thread-safe
-#     # my_lock = Threads.SpinLock()   # Create a lock to prevent thread collisions when updating meter
-#     my_lock = Threads.ReentrantLock()   # Create a lock to prevent thread collisions when updating meter
-
-#     all_results = Vector{Any}(undef, N)
-#     Threads.@threads for i in 1:N
-#     # @showprogress for i in 1:N
-#         Random.seed!(i)
-#         X = rand(1000)
-#         Y = zeros(length(X))
-#         for j in eachindex(X)
-#             for k in 1:j
-#                 Y[j] = Y[j] + X[k]
-#             end
-#         end
-#         all_results[i] = Y
-#         Threads.atomic_add!(jj, 1)
-#         Threads.lock(my_lock)
-#         update!(meter, jj[])
-#         Threads.unlock(my_lock)
-#     end
+#     # ---------------------------- Update progress bar --------------------------- #
+#     next!(meter)
 # end
+
+# @save "Data/Objects/M=2.jld2"  all_sim_outputs
+
+@load "Data/Objects/M=2.jld2"
+
+
+
+all_sim_scopes = disease_scope.(all_sim_outputs)
+all_sim_scopes = @showprogress [disease_scope(all_sim_outputs[i]) for i in eachindex(all_sim_outputs)]
+
+add_one(x) = x+1
+
+@showprogress add_one.(collect(1:10))
 
 15.752
 

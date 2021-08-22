@@ -2,3 +2,4 @@ To_Explore.jl
 Fix_Package_Loading.jl
 Data/Objects/*.jld2             # Exclude all data objects (only commit their compressed versions)
 !Data/Objects/Status_Raw.jld2   # Un-exclude this file
+Data/Objects/M=2.jld2
