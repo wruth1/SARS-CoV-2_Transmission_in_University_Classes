@@ -16,8 +16,6 @@ max_threads = Threads.nthreads()
 num_threads = max_threads - 1 # Leave one thread available while code is running
 
 include("Helper_Functions.jl");
-include("Update_Functions.jl");
-include("Read_Data.jl"); 
 
 
 #############################
@@ -169,7 +167,7 @@ end
 #     next!(meter)
 # end
 
-# @save "Data/Objects/M=2.jld2"  all_sim_outputs
+# @save "Data/Objects/M=2.jld2"  all_sim_outputs all_parameters
 
 @load "Data/Objects/M=2.jld2"
 

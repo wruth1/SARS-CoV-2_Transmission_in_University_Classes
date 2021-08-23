@@ -25,8 +25,9 @@ status is a wrapper containing "classes" and "students"
         A student is a dictionary containing:
             "compartment" -  Its compartment label (e.g. "S") 
             "classes" - A vector of its class indices. Indices are to the global "classes" object
-    "parameters" is a dictionary containing all the scalar parameters defined in the Global Parameters section
-        I.e. Everything but status
+all_sim_outputs is a vector of simulation outputs, one for each parameter combination.
+    A simulation_output is a vector of M trajectories.
+        A trajectory is an array of student counts, where columns index compartment and rows index day.
 
 Global Parameters:
     status: A dictionary containing a vector of classes and a vector of students
@@ -39,7 +40,20 @@ Global Parameters:
     recovery_prob_I: Probability of an I moving to R on a particular day
 
 Files:
-    Helper_Functions.jl
+    Helper_Functions.jl calls all other helper function scripts
+        Build_Objects.jl: Creating student and class objects from raw data.
+        Classwise_Risks.jl: Computing and updating the "risk" component of each class
+        Delete_Objects.jl: Safely removing a class or student from a status object
+            I.e. Making sure to adjust other classes' and students' indices appropriately and remove any isolated students
+            (those with no classes) or trivial classes (those with 1 or 0 remaining students)
+        Edit_Compartments.jl: Moving students between compartments, while also updating their classes
+        General_Utilities.jl: Functions which don't fit anywhere else.
+        Process_Results.jl: Turning simulation output into analyzable data.
+        Read_Data.jl: Reading our .csv file and constructing the corresponding status object.
+        Update_Functions.jl: Drivers functions for our simulation. 
+            Updating all members of a single compartment at each time step.
+            Running a single time step, a full term, and all replicates for a single parameter combination
+
         Defines get_compartments(students, X, output = "indices")
             Extracts all students in compartment X as either indices or student objects
         Defines change_compartment!(status, ind_student, compartment_new)
