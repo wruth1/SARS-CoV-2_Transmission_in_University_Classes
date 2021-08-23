@@ -12,10 +12,12 @@ using Infinity                  # Adds the numbers ∞ and -∞
 Random.seed!(21131346)
 M = 2 # Number of times to replicate each parameter combination
 
-max_threads = Threads.nthreads()
-num_threads = max_threads - 1 # Leave one thread available while code is running
 
 include("Helper_Functions.jl");
+
+# ------------------------- Load pre-computed objects ------------------------ #
+@load "Data/Objects/Status_Raw.jld2"    # Status object without risks
+@load "Data/Objects/M=2.jld2"           # Simulation results and matching parameter values
 
 
 #############################
@@ -83,10 +85,11 @@ A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       
 # --------- Raw status because it does not yet have classwise risks. --------- #
 # --------- Either compute and store (slow), or read from disk (fast) -------- #
 # ----------- Note: In latter case, only run if not already defined ---------- #
-# status_raw = read_data("Data/2019-Fall.csv", false) 
-# delete_tiny_classes!(status_raw)
-# @save "Data/Objects/Status_Raw.jld2" status_raw
-@load "Data/Objects/Status_Raw.jld2"
+if !@isdefined status_raw
+    status_raw = read_data("Data/2019-Fall.csv", false) 
+    delete_tiny_classes!(status_raw)
+    @save "Data/Objects/Status_Raw.jld2" status_raw
+end
 
 
 
@@ -169,18 +172,17 @@ end
 
 # @save "Data/Objects/M=2.jld2"  all_sim_outputs all_parameters
 
-@load "Data/Objects/M=2.jld2"
 
 
 
-all_sim_scopes = disease_scope.(all_sim_outputs)
-all_sim_scopes = @showprogress [disease_scope(all_sim_outputs[i]) for i in eachindex(all_sim_outputs)]
+# all_sim_scopes = disease_scope.(all_sim_outputs)
+# all_sim_scopes = @showprogress [disease_scope(all_sim_outputs[i]) for i in eachindex(all_sim_outputs)]
 
-add_one(x) = x+1
+# add_one(x) = x+1
 
-@showprogress add_one.(collect(1:10))
+# @showprogress add_one.(collect(1:10))
 
-15.752
+# 15.752
 
 ##################################
 ### Process simulation results ###
