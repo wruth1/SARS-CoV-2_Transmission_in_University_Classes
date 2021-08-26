@@ -1,5 +1,3 @@
-using Random, Distributions
-
 
 #############################################
 ###    Begin defining update functions    ###
@@ -256,6 +254,7 @@ function run_sim(status_raw, n_initial_cases, n_days)
     this_status = deepcopy(status_raw)
 
     ### Introduce a few initial cases
+    num_students = length(status_raw["students"])
     inds_infect = sample(1:num_students, n_initial_cases, replace=false)
     change_compartment!.(Ref(this_status), inds_infect, "I")
 

@@ -89,7 +89,7 @@ end
 """
 Get the average number of people affected by the disease. I.e. Average of N - S_final 
 """
-function disease_scope(sim_output)
+function average_outbreak_size(sim_output)
     mean_S_final =  @pipe sim_output |>
                     trajectory_summaries(_, mean) |>
                     X -> X[end, "S"]
@@ -100,4 +100,19 @@ function disease_scope(sim_output)
     this_num_students = sum(one_snapshot)
 
     this_num_students - mean_S_final
+end
+
+
+function get_one_outbreak_size(trajectory)
+    S_remaining = trajectory[end, "S"]
+    N = sum(trajectory[1,:])
+    return N - S_remaining
+end
+
+function get_outbreak_sizes(sim_output)
+    get_one_outbreak_size.(sim_output)
+end
+
+function all_outbreak_sizes(all_sim_outputs)
+    get_outbreak_sizes.(all_sim_outputs)
 end

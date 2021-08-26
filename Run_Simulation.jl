@@ -1,12 +1,15 @@
 
-using Plots
-using Random, Distributions     # For Update_Functions.jl
-using DataFrames, CSV           # For Read_Data.jl
-using Statistics                # For faster computation of standard deviations
-using ProgressMeter             # To track progress for long loops
-using Pipe                      # Improved pipe operator
-using JLD2                      # Save and load variables
-using Infinity                  # Adds the numbers ∞ and -∞
+using Plots         # For plotting
+using Random        # For better sampling
+using Distributions # ?
+using DataFrames    # For R-like data frames
+using CSV           # For Read_Data.jl
+using Statistics    # For faster computation of standard deviations
+using ProgressMeter # To track progress for long loops
+using Pipe          # Improved pipe operator
+using JLD2          # Save and load variables
+using Infinity      # Adds the numbers ∞ and -∞
+using StatsPlots    # For plotting variables in data frames
 
 
 Random.seed!(21131346)
@@ -48,14 +51,6 @@ if !@isdefined all_thresholds; const all_thresholds = [20, 50, 100, ∞]; end # 
 if !@isdefined all_parameters; const all_parameters = expand_grid(all_infect_param_I, all_infect_param_A, all_advance_prob_E,
     all_E_to_A_prob, all_disease_progress_prob, all_recovery_prob_A, all_recovery_prob_I, all_thresholds); end
 
-infect_param_I = all_infect_param_I[1]
-infect_param_A = all_infect_param_A[1]
-advance_prob_E = all_advance_prob_E[1]
-E_to_A_prob = all_E_to_A_prob[1]
-disease_progress_prob = all_disease_progress_prob[1]
-recovery_prob_A = all_recovery_prob_A[1]
-recovery_prob_I = all_recovery_prob_I[1]
-threshold = all_thresholds[2]
 
 #= 
 const infect_param_I = 1 # Proportionality constant for infection probability from symptomatic compartment
@@ -81,40 +76,40 @@ A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       
 # ---------------------------------------------------------------------------- #
 
 
-# ---------- Read-in data and remove any classes with only 1 student --------- #
-# --------- Raw status because it does not yet have classwise risks. --------- #
-# --------- Either compute and store (slow), or read from disk (fast) -------- #
-# ----------- Note: In latter case, only run if not already defined ---------- #
-if !@isdefined status_raw
-    status_raw = read_data("Data/2019-Fall.csv", false) 
-    delete_tiny_classes!(status_raw)
-    @save "Data/Objects/Status_Raw.jld2" status_raw
-end
+# # ---------- Read-in data and remove any classes with only 1 student --------- #
+# # --------- Raw status because it does not yet have classwise risks. --------- #
+# # --------- Either compute and store (slow), or read from disk (fast) -------- #
+# # ----------- Note: In latter case, only run if not already defined ---------- #
+# if !@isdefined status_raw
+#     status_raw = read_data("Data/2019-Fall.csv", false) 
+#     delete_tiny_classes!(status_raw)
+#     @save "Data/Objects/Status_Raw.jld2" status_raw
+# end
 
 
 
-# ----------- Create status objects with different max class sizes ----------- #
-# ------ Note: Functions to delete classes also delete isolated students ----- #
-# ------------------ Note: Only runs if not already defined ------------------ #
-if !@isdefined all_status_raws
-    all_status_raws = Dict{Any,Any}()
-    for i in eachindex(all_thresholds)
-        this_status_raw = deepcopy(status_raw)
-        this_threshold = all_thresholds[i]
-        delete_large_classes(this_status_raw, this_threshold)
-        delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
-        all_status_raws[this_threshold] = this_status_raw
-    end
-end
+# # ----------- Create status objects with different max class sizes ----------- #
+# # ------ Note: Functions to delete classes also delete isolated students ----- #
+# # ------------------ Note: Only runs if not already defined ------------------ #
+# if !@isdefined all_status_raws
+#     all_status_raws = Dict{Any,Any}()
+#     for i in eachindex(all_thresholds)
+#         this_status_raw = deepcopy(status_raw)
+#         this_threshold = all_thresholds[i]
+#         delete_large_classes(this_status_raw, this_threshold)
+#         delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
+#         all_status_raws[this_threshold] = this_status_raw
+#     end
+# end
 
-# --------------------- Extract some useful global values -------------------- #
-all_num_students = Dict{Any, Int16}()
-all_num_classes = Dict{Any, Int16}()
-for this_threshold in all_thresholds 
-    this_status = all_status_raws[this_threshold]
-    all_num_students[this_threshold] = length(this_status["students"])
-    all_num_classes[this_threshold] = length(this_status["classes"])
-end
+# # --------------------- Extract some useful global values -------------------- #
+# all_num_students = Dict{Any, Int16}()
+# all_num_classes = Dict{Any, Int16}()
+# for this_threshold in all_thresholds 
+#     this_status = all_status_raws[this_threshold]
+#     all_num_students[this_threshold] = length(this_status["students"])
+#     all_num_classes[this_threshold] = length(this_status["classes"])
+# end
 
 
 
@@ -131,19 +126,21 @@ end
 # all_sim_outputs = Vector{Any}(undef, length(all_parameters))
 
 
-# N = length(all_parameters)
-# # N = 50
+# # N = length(all_parameters)
+# N = 20
 # meter = Progress(N);    # Create progress meter
 # update!(meter, 0)       # Initialize progress of meter
 
 # # for ii in eachindex(all_parameters)
-# Threads.@threads for ii in 1:N
+# # Threads.@threads for ii in 1:N
+# for ii in 1:N
+
 #     # ----------------- Set seed locally for reproducible results ---------------- #
 #     this_seed = all_seeds[ii]
 #     Random.seed!(this_seed)
 
 #     # ---------------- Extract parameter values for this iteration --------------- #
-#     this_parameters = all_parameters[ii]
+#     this_parameters = all_parameters[end - ii]
 
 #     infect_param_I = this_parameters[1]
 #     infect_param_A = this_parameters[2]
@@ -155,8 +152,6 @@ end
 #     threshold = this_parameters[8]
 
 #     this_status_raw = all_status_raws[threshold]
-#     num_students = all_num_students[threshold]
-#     num_classes = all_num_classes[threshold]
 
 
 #     # ------------------- Run this iteration and store results ------------------- #

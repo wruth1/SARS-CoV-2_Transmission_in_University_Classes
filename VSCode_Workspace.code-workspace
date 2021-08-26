@@ -5,6 +5,7 @@
 		}
 	],
 	"settings": {
-		"editor.defaultFormatter": "julialang.language-julia"
+		"editor.defaultFormatter": "julialang.language-julia",
+		"r.rpath.windows": "C:/Program Files/R/R-4.1.0/bin/R.exe"
 	}
 }
