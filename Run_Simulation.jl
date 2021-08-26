@@ -63,9 +63,9 @@ const recovery_prob_A = disease_progress_prob / 9 # Probability of an A moving t
 const recovery_prob_I = 1/11.8 # Probability of an I moving to R on a particular day (Public Health Ontario 2021) =#
 n_initial_cases = 10
 
-### Useful global values
-advance_prob_A = 1 - (1 - disease_progress_prob) * (1 - recovery_prob_A) # Probability of leaving A on a particular day
-A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       # Probability of moving to R conditional on leaving A
+# ### Useful global values
+# advance_prob_A = 1 - (1 - disease_progress_prob) * (1 - recovery_prob_A) # Probability of leaving A on a particular day
+# A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       # Probability of moving to R conditional on leaving A
 
 
 
@@ -76,152 +76,95 @@ A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       
 # ---------------------------------------------------------------------------- #
 
 
-# # ---------- Read-in data and remove any classes with only 1 student --------- #
-# # --------- Raw status because it does not yet have classwise risks. --------- #
-# # --------- Either compute and store (slow), or read from disk (fast) -------- #
-# # ----------- Note: In latter case, only run if not already defined ---------- #
-# if !@isdefined status_raw
-#     status_raw = read_data("Data/2019-Fall.csv", false) 
-#     delete_tiny_classes!(status_raw)
-#     @save "Data/Objects/Status_Raw.jld2" status_raw
-# end
+# ---------- Read-in data and remove any classes with only 1 student --------- #
+# --------- Raw status because it does not yet have classwise risks. --------- #
+# --------- Either compute and store (slow), or read from disk (fast) -------- #
+# ----------- Note: In latter case, only run if not already defined ---------- #
+if !@isdefined status_raw
+    status_raw = read_data("Data/2019-Fall.csv", false) 
+    delete_tiny_classes!(status_raw)
+    @save "Data/Objects/Status_Raw.jld2" status_raw
+end
 
 
 
-# # ----------- Create status objects with different max class sizes ----------- #
-# # ------ Note: Functions to delete classes also delete isolated students ----- #
-# # ------------------ Note: Only runs if not already defined ------------------ #
-# if !@isdefined all_status_raws
-#     all_status_raws = Dict{Any,Any}()
-#     for i in eachindex(all_thresholds)
-#         this_status_raw = deepcopy(status_raw)
-#         this_threshold = all_thresholds[i]
-#         delete_large_classes(this_status_raw, this_threshold)
-#         delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
-#         all_status_raws[this_threshold] = this_status_raw
-#     end
-# end
+# ----------- Create status objects with different max class sizes ----------- #
+# ------ Note: Functions to delete classes also delete isolated students ----- #
+# ------------------ Note: Only runs if not already defined ------------------ #
+if !@isdefined all_status_raws
+    all_status_raws = Dict{Any,Any}()
+    for i in eachindex(all_thresholds)
+        this_status_raw = deepcopy(status_raw)
+        this_threshold = all_thresholds[i]
+        delete_large_classes(this_status_raw, this_threshold)
+        delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
+        all_status_raws[this_threshold] = this_status_raw
+    end
+end
 
-# # --------------------- Extract some useful global values -------------------- #
-# all_num_students = Dict{Any, Int16}()
-# all_num_classes = Dict{Any, Int16}()
-# for this_threshold in all_thresholds 
-#     this_status = all_status_raws[this_threshold]
-#     all_num_students[this_threshold] = length(this_status["students"])
-#     all_num_classes[this_threshold] = length(this_status["classes"])
-# end
-
-
-
-
-
-
-
-# # -------------- Pool of random seeds for use within simulation -------------- #
-# # ---- Note: UInt32 is 32-bit unsigned integer, represented in hexadecimal --- #
-# all_seeds = rand(UInt32, length(all_parameters))
-
-
-# # Container to store the output at each iteration
-# all_sim_outputs = Vector{Any}(undef, length(all_parameters))
-
-
-# # N = length(all_parameters)
-# N = 20
-# meter = Progress(N);    # Create progress meter
-# update!(meter, 0)       # Initialize progress of meter
-
-# # for ii in eachindex(all_parameters)
-# # Threads.@threads for ii in 1:N
-# for ii in 1:N
-
-#     # ----------------- Set seed locally for reproducible results ---------------- #
-#     this_seed = all_seeds[ii]
-#     Random.seed!(this_seed)
-
-#     # ---------------- Extract parameter values for this iteration --------------- #
-#     this_parameters = all_parameters[end - ii]
-
-#     infect_param_I = this_parameters[1]
-#     infect_param_A = this_parameters[2]
-#     advance_prob_E = this_parameters[3]
-#     E_to_A_prob = this_parameters[4]
-#     disease_progress_prob = this_parameters[5]
-#     recovery_prob_A = this_parameters[6]
-#     recovery_prob_I = this_parameters[7]
-#     threshold = this_parameters[8]
-
-#     this_status_raw = all_status_raws[threshold]
-
-
-#     # ------------------- Run this iteration and store results ------------------- #
-#     sim_outputs = one_parameter_set(this_status_raw, M, 
-#     infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, disease_progress_prob, recovery_prob_A, recovery_prob_I, 
-#     n_initial_cases)
-
-#     all_sim_outputs[ii] = sim_outputs
-
-#     # ---------------------------- Update progress bar --------------------------- #
-#     next!(meter)
-# end
-
-# @save "Data/Objects/M=2.jld2"  all_sim_outputs all_parameters
+# --------------------- Extract some useful global values -------------------- #
+all_num_students = Dict{Any, Int16}()
+all_num_classes = Dict{Any, Int16}()
+for this_threshold in all_thresholds 
+    this_status = all_status_raws[this_threshold]
+    all_num_students[this_threshold] = length(this_status["students"])
+    all_num_classes[this_threshold] = length(this_status["classes"])
+end
 
 
 
 
-# all_sim_scopes = disease_scope.(all_sim_outputs)
-# all_sim_scopes = @showprogress [disease_scope(all_sim_outputs[i]) for i in eachindex(all_sim_outputs)]
-
-# add_one(x) = x+1
-
-# @showprogress add_one.(collect(1:10))
-
-# 15.752
-
-##################################
-### Process simulation results ###
-##################################
-
-# sim_outputs = all_sim_outputs[1]
-
-# ### Plot mean trajectory for I with uncertainty
-# I_means = compartment_trajectory_summary(sim_outputs, "I", mean)
-# I_sds = compartment_trajectory_summary(sim_outputs, "I", std)
-
-
-# gr()
-# plot(0:n_days, I_means, ribbon=I_sds, fillalpha=0.5, label="Mean I Trajectory with ± 1 SD")
-
-
-# ### Plot mean trajectories for all compartments
-# mean_trajectories = trajectory_summaries(sim_outputs, mean)
-
-# plotly()
-# p = plot();
-# for X in all_compartments
-#     plot!(p, 0:n_days, mean_trajectories[:, X], label=X);
-# end
-# plot(p)
 
 
 
-# ### Plot mean trajectories for all compartments with uncertainty
-# sd_trajectories = trajectory_summaries(sim_outputs, std)
+# -------------- Pool of random seeds for use within simulation -------------- #
+# ---- Note: UInt32 is 32-bit unsigned integer, represented in hexadecimal --- #
+all_seeds = rand(UInt32, length(all_parameters))
 
 
-# gr()
-
-# p2 = plot();
-# for X in all_compartments
-#     plot!(p2, 0:n_days, mean_trajectories[:, X], ribbon=sd_trajectories[:, X], fillalpha=0.5, label=X);
-# end
-# plot(p2)
+# Container to store the output at each iteration
+all_sim_outputs = Vector{Any}(undef, length(all_parameters))
 
 
-# ### Add vertical lines for weekends
-# Fridays = (0:5) * 7 .+ 5
-# Sundays = Fridays .+ 2
-# weekends = vcat(Fridays, Sundays)
+# N = length(all_parameters)
+N = 20
+meter = Progress(N);    # Create progress meter
+update!(meter, 0)       # Initialize progress of meter
 
-# vline!(p2, weekends, label="Weekends")
+# for ii in eachindex(all_parameters)
+# Threads.@threads for ii in 1:N
+for ii in 1:N
+
+    # ----------------- Set seed locally for reproducible results ---------------- #
+    this_seed = all_seeds[ii]
+    Random.seed!(this_seed)
+
+    # ---------------- Extract parameter values for this iteration --------------- #
+    this_parameters = all_parameters[end - ii]
+
+    infect_param_I = this_parameters[1]
+    infect_param_A = this_parameters[2]
+    advance_prob_E = this_parameters[3]
+    E_to_A_prob = this_parameters[4]
+    disease_progress_prob = this_parameters[5]
+    recovery_prob_A = this_parameters[6]
+    recovery_prob_I = this_parameters[7]
+    threshold = this_parameters[8]
+
+    this_status_raw = all_status_raws[threshold]
+    advance_prob_A = 1 - (1 - disease_progress_prob) * (1 - recovery_prob_A)
+    A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)
+
+
+    # ------------------- Run this iteration and store results ------------------- #
+    sim_outputs = one_parameter_set(this_status_raw, M, 
+    infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_I, advance_prob_A, A_to_R_prob, 
+    n_initial_cases, n_days)
+
+    all_sim_outputs[ii] = sim_outputs
+
+    # ---------------------------- Update progress bar --------------------------- #
+    next!(meter)
+end
+
+@save "Data/Objects/M=2.jld2"  all_sim_outputs all_parameters

@@ -164,7 +164,7 @@ function update_I!(status_new, status_old, recovery_prob_I)
     # Get number transitioning out out of I
     n_I = length(inds_I)
     if n_I == 0
-        return nothing # End the process if there are no exposeds
+        return nothing # End the process if there are no infecteds
     end
     this_binom = Binomial(n_I, recovery_prob_I)
     n_leaving = rand(this_binom, 1)[1] # Need output to be a scalar, not a length 1 vector
@@ -197,7 +197,8 @@ end
 Runs a single time step and update status_new using status_old as reference and parameters drawn from global scope
 
 """
-function one_step!(status_new, status_old, day)
+function one_step!(status_new, status_old, day,
+    infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I, advance_prob_A, A_to_R_prob)
     update_S!(status_new, status_old, day)
     update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
     update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
@@ -213,7 +214,8 @@ Runs through a full term starting in status_initial and running for the specifie
 
 Output: A vector of compartment sizes.
 """
-function one_term(status_initial, n_days)
+function one_term(status_initial, infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
+    advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
     # Container to store all compartment counts
     trajectories = Array{Int64}(undef, n_days + 1, num_compartments)
     initial_counts = all_compartment_counts(status_initial)
@@ -227,7 +229,8 @@ function one_term(status_initial, n_days)
     for j ∈ 1:n_days
         # status_new = deepcopy(status_old) # This doesn't appear to be necessary, and takes a lot of time to run.
         status_new = status_old
-        one_step!(status_new, status_old, day)
+        one_step!(status_new, status_old, day, 
+        infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I, advance_prob_A, A_to_R_prob)
 
         this_compartment_counts = all_compartment_counts(status_new)
         trajectories[j + 1,:] = this_compartment_counts
@@ -250,7 +253,8 @@ end
     Create a copy of status, infect the specified number of initial cases, 
     then generate an infection trajectory and return it as a data frame.
 """
-function run_sim(status_raw, n_initial_cases, n_days)
+function run_sim(status_raw, infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
+    advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
     this_status = deepcopy(status_raw)
 
     ### Introduce a few initial cases
@@ -262,7 +266,8 @@ function run_sim(status_raw, n_initial_cases, n_days)
     compute_risk!.(this_status["classes"], infect_param_A, infect_param_I)
 
 
-    trajectories_mat = one_term(this_status, n_days)
+    trajectories_mat = one_term(this_status, infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
+    advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
     trajectories_data = DataFrame(trajectories_mat, all_compartments)
 end
 
@@ -286,11 +291,13 @@ Run M simulation replicates with the specified parameter values on the provided 
 - `n_initial_cases`: Number of students to move to the I compartment before starting each simulation
 """
 function one_parameter_set(status_raw, M, 
-    infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, disease_progress_prob, recovery_prob_A, recovery_prob_I,
-    n_initial_cases)
+    infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
+    advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
+
     all_sim_outputs = Vector{Any}(undef, M)
     for i in 1:M
-        all_sim_outputs[i] = run_sim(status_raw, n_initial_cases, n_days)
+        all_sim_outputs[i] = run_sim(status_raw, infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
+        advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
     end
 
     return all_sim_outputs
