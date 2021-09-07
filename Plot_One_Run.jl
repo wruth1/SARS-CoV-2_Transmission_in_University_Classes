@@ -1,4 +1,6 @@
 
+@load "Data/Objects/test_data.jld2"
+
 sim_outputs = all_sim_outputs[1]
 
 ### Plot mean trajectory for I with uncertainty
