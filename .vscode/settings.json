@@ -2,5 +2,6 @@
     "editor.defaultFormatter": "julialang.language-julia",
     "[julia]": {
         "editor.defaultFormatter": "julialang.language-julia"
-    }
+    },
+    "editor.bracketPairColorization.enabled": true
 }

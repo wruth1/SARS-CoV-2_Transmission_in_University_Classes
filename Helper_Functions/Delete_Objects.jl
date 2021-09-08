@@ -24,15 +24,6 @@ function delete_class_in_student(student, i)
     this_classes = student["classes"]
     
     delete_in_list!(this_classes, i)
-
-
-
-    # # Remove class i if present
-    # filter!(X -> X != i, this_classes) ###! Warning: i is an index to the classes component of status, not to this_classes
-    # # Subtract 1 from class indices if larger than i
-    # map!(x -> x > i ? x - 1 : x, this_classes, this_classes)
-
-    # return student
 end
 
 """
@@ -83,14 +74,40 @@ end
 
 
 """
+Delete all students in the provided list.
+
+Note: Students must be deleted in descending index order.
+"""
+function delete_student_list!(status, student_list)
+    for i in reverse(student_list)
+        delete_student!(status, i)
+    end
+
+    return status
+end
+
+
+"""
+Delete all classes in the provided list.
+
+Note: Classes must be deleted in descending index order.
+"""
+function delete_class_list!(status, class_list)
+    for i in reverse(class_list)
+        delete_class!(status, i)
+    end
+
+    return status
+end
+
+
+"""
 Delete students with no classes.
 """
 function delete_isolated_students!(status)
     students_to_remove = findall(X -> isempty(X["classes"]), status["students"])
 
-    for i in reverse(students_to_remove)
-        delete_student!(status, i)
-    end
+    delete_student_list!(status, students_to_remove)
 end
 
 """
@@ -99,9 +116,7 @@ Delete classes with 1 or 0 students. Optionally, also remove students with no re
 function delete_tiny_classes!(status, adjust_students=true)
     classes_to_remove = findall(X -> X["size"] <= 1, status["classes"])
 
-    for i in reverse(classes_to_remove) ### Removing classes in recreasing order avoids each iteration ruining subsequent indices
-        delete_class!(status, i)
-    end
+    delete_class_list!(status, classes_to_remove)
 
     # ----------------- Remove students with no remaining classes ---------------- #
     if adjust_students; delete_isolated_students!(status); end
@@ -118,11 +133,11 @@ function delete_large_classes(status, threshold, adjust_students=true)
 
     classes_to_remove = findall(X -> X["size"] > threshold, classes)
 
-    for i in reverse(classes_to_remove) ### Removing classes in recreasing order avoids each iteration ruining subsequent indices
-        delete_class!(status, i)
-    end
+    delete_class_list!(status, classes_to_remove)
 
     # ----------------- Remove students with no remaining classes ---------------- #
     if adjust_students; delete_isolated_students!(status); end
 
 end
+
+

@@ -61,3 +61,17 @@ function nested2array(X)
     return Y
 end
 
+"""
+Shorthand for number of students in status.
+"""
+function ns(status)
+    length(status["students"])
+end
+
+
+"""
+Shorthand for number of classes in status.
+"""
+function nc(status)
+    length(status["classes"])
+end

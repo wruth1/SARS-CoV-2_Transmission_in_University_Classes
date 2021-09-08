@@ -10,6 +10,8 @@ using Pipe          # Improved pipe operator
 using JLD2          # Save and load variables
 using Infinity      # Adds the numbers ∞ and -∞
 using StatsPlots    # For plotting variables in data frames
+using LightGraphs   # For graph functions
+
 
 
 Random.seed!(21131346)
@@ -20,6 +22,7 @@ include("Helper_Functions.jl");
 
 # ------------------------- Load pre-computed objects ------------------------ #
 @load "Data/Objects/Status_Raw.jld2"    # Status object without risks
+# @load "Data/Objects/All_Status_Raws.jld2"    # Status object without risks
 @load "Data/Objects/M=2.jld2"           # Simulation results and matching parameter values
 
 
@@ -83,7 +86,6 @@ n_initial_cases = 10
 if !@isdefined status_raw
     status_raw = read_data("Data/2019-Fall.csv", false) 
     delete_tiny_classes!(status_raw)
-    @save "Data/Objects/Status_Raw.jld2" status_raw
 end
 
 
@@ -100,7 +102,22 @@ if !@isdefined all_status_raws
         delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
         all_status_raws[this_threshold] = this_status_raw
     end
+
+    # ---------- Extract the largest connected component in each network --------- #
+    for thresh in all_thresholds
+        println(thresh)
+        this_status = all_status_raws[thresh];
+        delete_isolated_components!(this_status);
+    end
+
+
+    @save "Data/Objects/All_Status_Raws.jld2" all_status_raws
 end
+
+q = deepcopy(all_status_raws)
+w = q[all_thresholds[1]]
+e = all_status_raws[all_thresholds[1]]
+delete_isolated_components!(w)
 
 # --------------------- Extract some useful global values -------------------- #
 all_num_students = Dict{Any, Int16}()
