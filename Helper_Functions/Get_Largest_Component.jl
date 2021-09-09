@@ -29,6 +29,7 @@ function build_enrollment(status)
         end
     end
 
+    enrollment = sparse(enrollment)
     return enrollment
 end
 
@@ -72,3 +73,4 @@ function delete_isolated_components!(status)
     
     return status
 end
+

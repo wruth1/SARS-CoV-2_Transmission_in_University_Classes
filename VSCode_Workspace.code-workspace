@@ -7,6 +7,7 @@
 	"settings": {
 		"editor.defaultFormatter": "julialang.language-julia",
 		"r.rpath.windows": "C:/Program Files/R/R-4.1.0/bin/R.exe",
-		"editor.bracketPairColorization.enabled": true
+		"editor.bracketPairColorization.enabled": true,
+		"workbench.colorTheme": "Julia (Monokai Vibrant)"
 	}
 }

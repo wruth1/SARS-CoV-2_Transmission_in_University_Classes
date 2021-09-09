@@ -1,16 +1,18 @@
 
-using Plots         # For plotting
-using Random        # For better sampling
-using Distributions # ?
-using DataFrames    # For R-like data frames
-using CSV           # For Read_Data.jl
-using Statistics    # For faster computation of standard deviations
-using ProgressMeter # To track progress for long loops
-using Pipe          # Improved pipe operator
-using JLD2          # Save and load variables
-using Infinity      # Adds the numbers ∞ and -∞
-using StatsPlots    # For plotting variables in data frames
-using LightGraphs   # For graph functions
+using Plots             # For plotting
+using Random            # For better sampling
+using Distributions     # ?
+using DataFrames        # For R-like data frames
+using CSV               # For Read_Data.jl
+using Statistics        # For faster computation of standard deviations
+using ProgressMeter     # To track progress for long loops
+using Pipe              # Improved pipe operator
+using JLD2              # Save and load variables
+using Infinity          # Adds the numbers ∞ and -∞
+using StatsPlots        # For plotting variables in data frames
+using LightGraphs       # For graph functions
+using MatrixNetworks    # For graph functions on adjacency matrices
+using SparseArrays      # For sparse matrix multiplication
 
 
 
@@ -21,8 +23,8 @@ M = 2 # Number of times to replicate each parameter combination
 include("Helper_Functions.jl");
 
 # ------------------------- Load pre-computed objects ------------------------ #
-@load "Data/Objects/Status_Raw.jld2"    # Status object without risks
-# @load "Data/Objects/All_Status_Raws.jld2"    # Status object without risks
+# @load "Data/Objects/Status_Raw.jld2"    # Status object without risks
+@load "Data/Objects/All_Status_Raws.jld2"    # Status object without risks
 @load "Data/Objects/M=2.jld2"           # Simulation results and matching parameter values
 
 
@@ -83,7 +85,7 @@ n_initial_cases = 10
 # --------- Raw status because it does not yet have classwise risks. --------- #
 # --------- Either compute and store (slow), or read from disk (fast) -------- #
 # ----------- Note: In latter case, only run if not already defined ---------- #
-if !@isdefined status_raw
+if (!@isdefined status_raw) & (!@isdefined all_status_raws)
     status_raw = read_data("Data/2019-Fall.csv", false) 
     delete_tiny_classes!(status_raw)
 end
@@ -95,21 +97,20 @@ end
 # ------------------ Note: Only runs if not already defined ------------------ #
 if !@isdefined all_status_raws
     all_status_raws = Dict{Any,Any}()
-    for i in eachindex(all_thresholds)
-        this_status_raw = deepcopy(status_raw)
-        this_threshold = all_thresholds[i]
-        delete_large_classes(this_status_raw, this_threshold)
-        delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
-        all_status_raws[this_threshold] = this_status_raw
-    end
-
-    # ---------- Extract the largest connected component in each network --------- #
     for thresh in all_thresholds
         println(thresh)
-        this_status = all_status_raws[thresh];
-        delete_isolated_components!(this_status);
-    end
+        
+        this_status_raw = deepcopy(status_raw)
 
+        # --------------------------- Remove large classes --------------------------- #
+        delete_large_classes(this_status_raw, thresh)
+        delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
+        
+        # ------------------ Extract the largest connected component ----------------- #
+        delete_isolated_components!(this_status_raw);
+
+        all_status_raws[thresh] = this_status_raw
+    end
 
     @save "Data/Objects/All_Status_Raws.jld2" all_status_raws
 end
@@ -144,7 +145,7 @@ all_sim_outputs = Vector{Any}(undef, length(all_parameters))
 
 
 # N = length(all_parameters)
-N = 20
+N = 200
 meter = Progress(N);    # Create progress meter
 update!(meter, 0)       # Initialize progress of meter
 
@@ -184,4 +185,4 @@ for ii in 1:N
     next!(meter)
 end
 
-@save "Data/Objects/M=2.jld2"  all_sim_outputs all_parameters
+@save "Data/Objects/M=$M, N=$N.jld2"  all_sim_outputs all_parameters
