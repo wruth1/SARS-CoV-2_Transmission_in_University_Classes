@@ -1,5 +1,6 @@
 To_Explore.jl
 Fix_Package_Loading.jl
-Data/Objects/*.jld2             # Exclude all data objects (only commit their compressed versions)
-!Data/Objects/Status_Raw.jld2   # Un-exclude this file
-Data/Objects/M=2.jld2
+Data/                           # The data folder is very messy. Best to just exclude it except for what is needed to run the simulation.
+!Data/*.csv                     # Un-exclude the original data
+!Data/Objects/Status_Raw.jld2   # Un-exclude the status object, which takes a non-trivial amount of time to construct.
+VSCode_Tasks/
