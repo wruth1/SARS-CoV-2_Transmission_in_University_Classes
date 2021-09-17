@@ -11,7 +11,7 @@ using JLD2              # Save and load variables
 using Infinity          # Adds the numbers ∞ and -∞
 using StatsPlots        # For plotting variables in data frames
 using LightGraphs       # For graph functions
-using MatrixNetworks    # For graph functions on adjacency matrices
+using MatrixNetworks    # For graph functions on adjacency matrices *************** I don't think this one is needed
 using SparseArrays      # For sparse matrix multiplication
 
 
@@ -115,10 +115,6 @@ if !@isdefined all_status_raws
     @save "Data/Objects/All_Status_Raws.jld2" all_status_raws
 end
 
-q = deepcopy(all_status_raws)
-w = q[all_thresholds[1]]
-e = all_status_raws[all_thresholds[1]]
-delete_isolated_components!(w)
 
 # --------------------- Extract some useful global values -------------------- #
 all_num_students = Dict{Any, Int16}()
@@ -150,8 +146,8 @@ meter = Progress(N);    # Create progress meter
 update!(meter, 0)       # Initialize progress of meter
 
 # for ii in eachindex(all_parameters)
-# Threads.@threads for ii in 1:N
-for ii in 1:N
+Threads.@threads for ii in 1:N
+# for ii in 1:N
 
     # ----------------- Set seed locally for reproducible results ---------------- #
     this_seed = all_seeds[ii]
@@ -186,3 +182,4 @@ for ii in 1:N
 end
 
 @save "Data/Objects/M=$M, N=$N.jld2"  all_sim_outputs all_parameters
+

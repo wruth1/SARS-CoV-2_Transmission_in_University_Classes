@@ -86,6 +86,17 @@ function trajectory_summaries(sim_output, f)
         DataFrame(_, all_compartments)                                          # Convert result to a data frame
 end
 
+
+
+
+
+
+
+# ---------------------------------------------------------------------------- #
+#                                 Outbreak size                                #
+# ---------------------------------------------------------------------------- #
+
+
 """
 Get the average number of people affected by the disease. I.e. Average of N - S_final 
 """
