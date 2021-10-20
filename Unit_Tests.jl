@@ -558,7 +558,7 @@ end
     for i in eachindex(testing_thresholds)
         this_status = deepcopy(status)
         this_threshold = testing_thresholds[i]
-        delete_large_classes(this_status, this_threshold)
+        delete_large_classes!(this_status, this_threshold)
         delete_tiny_classes!(this_status)   # Also remove any classes with 1 remaining student
         all_statuses[this_threshold] = this_status
     end

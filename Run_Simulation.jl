@@ -57,6 +57,9 @@ if !@isdefined all_parameters; const all_parameters = expand_grid(all_infect_par
     all_E_to_A_prob, all_disease_progress_prob, all_recovery_prob_A, all_recovery_prob_I, all_thresholds); end
 
 
+
+
+    
 #= 
 const infect_param_I = 1 # Proportionality constant for infection probability from symptomatic compartment
 const infect_param_A = 0.75 * infect_param_I # Proportionality constant for infection probability from 
@@ -103,7 +106,7 @@ if !@isdefined all_status_raws
         this_status_raw = deepcopy(status_raw)
 
         # --------------------------- Remove large classes --------------------------- #
-        delete_large_classes(this_status_raw, thresh)
+        delete_large_classes!(this_status_raw, thresh)
         delete_tiny_classes!(this_status_raw)   # Also remove any classes with 1 remaining student
         
         # ------------------ Extract the largest connected component ----------------- #

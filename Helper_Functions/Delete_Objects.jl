@@ -127,7 +127,7 @@ end
 Remove all classes from status with size greater than the specified threshold. 
 Optionally, also remove students with no remaining classes.
 """
-function delete_large_classes(status, threshold, adjust_students=true) 
+function delete_large_classes!(status, threshold, adjust_students=true) 
     classes = status["classes"]
     students = status["students"]
 
