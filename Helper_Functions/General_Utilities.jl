@@ -75,3 +75,17 @@ Shorthand for number of classes in status.
 function nc(status)
     length(status["classes"])
 end
+
+"""
+Shorthand for number of students in compartment X
+"""
+function nsX(status, X)
+    students = status["students"]
+    this_comp = filter(y -> y["compartment"] == X, students)
+    length(this_comp)
+end
+
+"""
+Extract infection risk for each class
+"""
+get_risks(status) = [status["classes"][i]["risk"] for i in eachindex(status["classes"])]

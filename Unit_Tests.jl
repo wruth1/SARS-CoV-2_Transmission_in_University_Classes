@@ -1,5 +1,7 @@
 using Test
 
+#! Important: To run tests, first set all parameter values
+
 @testset "Update_Functions" begin
     include("Toy_Simulation.jl")
     
@@ -12,7 +14,7 @@ using Test
     @testset "Update_S!" begin
 
 
-        update_S!(status_new, status_old, 1:7)
+        update_S!(status_new, status_old, 1)
 
         students_old = status_old["students"]
         students_new = status_new["students"]
@@ -38,8 +40,6 @@ using Test
     @testset "Update_E!" begin
 
         @testset "Basic" begin
-        advance_prob_E = 0.2 # Probability of an E moving to either A or I on a particular day
-            E_to_A_prob = 0.5 # Probability that an advancement from E is to A
 
             status_new = deepcopy(status_old) # Make a new copy of status_new
             update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
@@ -53,8 +53,8 @@ using Test
             A_old = get_compartments(students_old, "A")
             A_new = get_compartments(students_new, "A")
 
-            I_old = get_compartments(students_old, "I")
-            I_new = get_compartments(students_new, "I")
+            I1_old = get_compartments(students_old, "I1")
+            I1_new = get_compartments(students_new, "I1")
 
             # Check that no new exposeds have been introduced
             @test length(setdiff(E_new, E_old)) == 0
@@ -63,14 +63,16 @@ using Test
             @test length(setdiff(A_old, A_new)) == 0
 
             # Check that no infecteds have been deleted
-            @test length(setdiff(I_old, I_new)) == 0
+            @test length(setdiff(I1_old, I1_new)) == 0
 
-            # Check that all removed Es have been added to either A or I
+            # Check that all removed Es have been added to either A or I1
             E_diff = setdiff(E_old, E_new)
             A_diff = setdiff(A_new, A_old)
-            I_diff = setdiff(I_new, I_old)
-            @test issetequal(E_diff, union(A_diff, I_diff))
+            I1_diff = setdiff(I1_new, I1_old)
+            @test issetequal(E_diff, union(A_diff, I1_diff))
         end
+
+        #=
 
         @testset "No Outflow" begin
             advance_prob_E = 0 # Probability of an E moving to either A or I on a particular day
@@ -196,15 +198,14 @@ using Test
             A_diff = setdiff(A_new, A_old)
             @test issetequal(E_diff, A_diff)
         end
+        =#
     end
 
-    #=
-            @testset "Update_A!" begin
+    
+    @testset "Update_A!" begin
         @testset "Basic" begin
-            recovery_prob_A = 0.2 # Probability of an A moving to R on a particular day
-
             status_new = deepcopy(status_old) # Make a new copy of status_new
-            update_A!(status_new, status_old, recovery_prob_A)
+            update_A!(status_new, status_old, advance_prob_A)
 
             students_old = status_old["students"]
             students_new = status_new["students"]
@@ -226,7 +227,7 @@ using Test
             R_diff = setdiff(R_new, R_old)
             @test issetequal(A_diff, R_diff)
         end
-
+#=
         @testset "No Outflow" begin
             recovery_prob_A = 0 # Probability of an A moving to R on a particular day
 
@@ -272,9 +273,10 @@ using Test
             R_diff = setdiff(R_new, R_old)
             @test issetequal(A_old, R_diff)
         end
+        =#
     end
-    =#
-
+    
+#=
             @testset "Update_I!" begin
         @testset "Basic" begin
             recovery_prob_I = 0.2 # Probability of an I moving to R on a particular day
@@ -515,11 +517,10 @@ end
         end
     end
 
-            
-    
-
+=#  
 end
 
+#=
 @testset "Class and Student Removal" begin
     # ----------------- Get all indices of classes from students ----------------- #
     function get_class_indices(student)
@@ -576,3 +577,4 @@ end
         end
     end
 end
+=#

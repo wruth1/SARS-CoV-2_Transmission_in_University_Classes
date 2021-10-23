@@ -10,25 +10,28 @@ function transmit_prob(class_size, infect_param)
     prob
 end
 
-# Compute risk of a single class
-function class_risk(class, infect_param_A, infect_param_I)
+# Compute risk of a single class (i.e. daily infection probability of a single susceptible)
+function class_risk(class, infect_param_A, infect_param_I1, infect_param_I2)
     size = class["size"]
+    p_I1 = transmit_prob(size, infect_param_I1)
+    p_I2 = transmit_prob(size, infect_param_I2)
     p_A = transmit_prob(size, infect_param_A)
-    p_I = transmit_prob(size, infect_param_I)
 
+    n_I1 = length(class["I1"])
+    n_I2 = length(class["I2"])
     n_A = length(class["A"])
-    n_I = length(class["I"])
 
     # Probability of no infection from the specified compartment
+    contrib_I1 = (1 - p_I1)^n_I1
+    contrib_I2 = (1 - p_I2)^n_I2
     contrib_A = (1 - p_A)^n_A
-    contrib_I = (1 - p_I)^n_I
 
-    risk = 1 - contrib_A * contrib_I
+    risk = 1 - contrib_I1 * contrib_I2 * contrib_A
 end
 
 
 ### Incorporate the computed risk into the class
 ### Note: can also be used to update the class risk if number of As or Is has changed
-function compute_risk!(class, infect_param_A, infect_param_I)
-    class["risk"] = class_risk(class, infect_param_A, infect_param_I)
+function compute_risk!(class, infect_param_A, infect_param_I1, infect_param_I2)
+    class["risk"] = class_risk(class, infect_param_A, infect_param_I1, infect_param_I2)
 end

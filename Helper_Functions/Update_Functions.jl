@@ -52,10 +52,10 @@ function update_S!(status_new, status_old, day)
 end
 
 
-# Moves some fraction of Es to A and/or I.
+# Moves some fraction of Es to I1 and/or A.
 # Changes are made in status_new, values for computation are obtained from status_old.
 # advance_prob_E is the day-wise probability of an E moving to some other compartment
-# E_to_A_prob is the proportion of transitions out of E which are to A (the rest go to I)
+# E_to_A_prob is the proportion of transitions out of E which are to A (the rest go to I1)
 function update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
     students_old = status_old["students"]
 
@@ -78,10 +78,10 @@ function update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
     #! WARNING: We are sampling indices to students, not indices to inds_E
     which_to_transition = sample(inds_E, n_leaving, replace=false)
 
-    # Choose how many of the transitions are to A and I
+    # Choose how many of the transitions are to A and I1
     binom_to_A = Binomial(n_leaving, E_to_A_prob)
     n_to_A = rand(binom_to_A, 1)[1] 
-    n_to_I = n_leaving - n_to_A
+    n_to_I1 = n_leaving - n_to_A
 
     # Choose individuals and perform transitions to A
     if n_to_A != 0
@@ -89,133 +89,104 @@ function update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
         change_compartment!.(Ref(status_new), which_to_A, "A")
     else
         # Even if no transitions to A occur, still create an empty container so we can do 
-        # set arithmetic to get indices transitioning to I
+        # set arithmetic to get indices transitioning to I1
         which_to_A = Vector{Int64}()
     end
 
-    # Choose individuals and perform transitions to I
-    if n_to_I != 0
-        which_to_I = setdiff(which_to_transition, which_to_A)
-        change_compartment!.(Ref(status_new), which_to_I, "I")
+    # Choose individuals and perform transitions to I1
+    if n_to_I1 != 0
+        which_to_I1 = setdiff(which_to_transition, which_to_A)
+        change_compartment!.(Ref(status_new), which_to_I1, "I1")
     end
 end
 
-# Moves some fraction of As to R.
-# Changes are made in status_new, values for computation are obtained from status_old.
-# recovery_prob_A is the probability of a particular asymptomatic recovering on a specific day
-"""
-    update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
 
-Choose a random number of As to move to other compartments using advance_prob_A. 
-These individuals are divided between I and R using A_to_R_prob.
-
-Note: It might feel slightly more natural to focus on the A to I transitions than A to R. 
-However, this function emphasizes R to make it easier to distinguish function from update_E!. Specifically, Es never move to R, and
-As never move to A.
 """
-function update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
+    update_one_dest!(status_new, status_old, origin, dest, advance_prob)
+
+Transition a random number of students from origin to dest compartments. Probability of an individual transitioning is advance_prob.
+
+Note: We allow for the possibility of one student being selected to transition multiple times. In this case, we just transition them and ignore the multiplicity.
+"""
+function update_one_dest!(status_new, status_old, origin, dest, advance_prob)
     students_old = status_old["students"]
 
-    # We only need the indices of the students in A. Extract these indices here
-    inds_A = get_compartments(students_old, "A")
+    # We only need the indices of the students in the origin compartment. Extract these indices here
+    inds_orig = get_compartments(students_old, origin)
 
-    ### Get number transitioning out out of A
-    n_A = length(inds_A)
-    n_A != 0 ? nothing : return nothing # End the process if there are no exposeds
-    this_binom = Binomial(n_A, advance_prob_A)
-    n_leaving = rand(this_binom, 1)[1] # Need output to be a scalar, not a length 1 vector
-    n_leaving != 0 ? nothing : return nothing # End the process if no individuals leave A
-
-    # Choose how many of the transitions are to R and I
-    binom_to_R = Binomial(n_leaving, A_to_R_prob)
-    n_to_R = rand(binom_to_R, 1)[1] 
-    n_to_I = n_leaving - n_to_R
-
-    # Choose specific individuals to transition out of A
-    #! WARNING: We are sampling indices to students, not indices to inds_A
-    which_to_transition = sample(inds_A, n_leaving, replace=false)
-
-    # Choose individuals and perform transitions to R
-    if n_to_R != 0
-        which_to_R = sample(which_to_transition, n_to_R, replace=false)
-        change_compartment!.(Ref(status_new), which_to_R, "R")
-    else
-        # Even if no transitions to A occur, still create an empty container so we can do 
-        # set arithmetic to get indices transitioning to I
-        which_to_R = Vector{Int64}()
+    # Get number transitioning out
+    n_orig = length(inds_orig)
+    if n_orig == 0
+        return nothing # End the process if there are no students in the origin compartment
     end
-
-    # Choose individuals and perform transitions to I
-    if n_to_I != 0
-        which_to_I = setdiff(which_to_transition, which_to_R)
-        change_compartment!.(Ref(status_new), which_to_I, "I")
-    end
-end
-
-# Moves some fraction of Is to R.
-# Changes are made in status_new, values for computation are obtained from status_old.
-# recovery_prob_I is the probability of a particular asymptomatic recovering on a specific day
-function update_I!(status_new, status_old, recovery_prob_I)
-    students_old = status_old["students"]
-
-    # We only need the indices of the students in I. Extract these indices here
-    inds_I = get_compartments(students_old, "I")
-
-    # Get number transitioning out out of I
-    n_I = length(inds_I)
-    if n_I == 0
-        return nothing # End the process if there are no infecteds
-    end
-    this_binom = Binomial(n_I, recovery_prob_I)
+    this_binom = Binomial(n_orig, advance_prob)
     n_leaving = rand(this_binom, 1)[1] # Need output to be a scalar, not a length 1 vector
 
     if n_leaving == 0
         return nothing # End the process here if no transitions occur
     end
 
-    # Choose specific individuals to transition out of I
-    # WARNING: We are sampling indices to students, not indices to inds_I
-    which_to_transition = sample(inds_I, n_leaving, replace=false)
+    # Choose specific individuals to transition out
+    # WARNING: We are sampling indices to students, not indices to inds_orig. Values of inds_origin correspond to indices to students
+    which_to_transition = sample(inds_orig, n_leaving, replace=false)
 
     # Update status_new
-    change_compartment!.(Ref(status_new), which_to_transition, "R")
+    change_compartment!.(Ref(status_new), which_to_transition, dest)
 end
 
+
+function update_A!(status_new, status_old, advance_prob_A)
+    update_one_dest!(status_new, status_old, "A", "R", advance_prob_A)
+end
+
+function update_I1!(status_new, status_old, advance_prob_I1)
+    update_one_dest!(status_new, status_old, "I1", "I2", advance_prob_I1)
+end
+
+function update_I2!(status_new, status_old, advance_prob_I2)
+    update_one_dest!(status_new, status_old, "I2", "R", advance_prob_I2)
+end
+
+
+
+
+
 # Re-compute risks for each class and update the class objects
-function update_risk!(status_new, infect_param_A, infect_param_I)
+function update_risk!(status_new, infect_param_A, infect_param_I1, infect_param_I2)
     classes = status_new["classes"]
 
     # Compute and store new classwise risks
-    compute_risk!.(classes, infect_param_A, infect_param_I)
+    compute_risk!.(classes, infect_param_A, infect_param_I1, infect_param_I2)
 end
 
 
 # Runs a single time step and update status with parameters drawn from global scope
 """
-    one_step!(status_new, status_old, day)
+    one_step!(status_new, status_old, day, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E, advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob)
 
 Runs a single time step and update status_new using status_old as reference and parameters drawn from global scope
 
 """
-function one_step!(status_new, status_old, day,
-    infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I, advance_prob_A, A_to_R_prob)
+function one_step!(status_new, status_old, day, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E,
+    advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob)
     update_S!(status_new, status_old, day)
     update_E!(status_new, status_old, advance_prob_E, E_to_A_prob)
-    update_A!(status_new, status_old, advance_prob_A, A_to_R_prob)
-    update_I!(status_new, status_old, recovery_prob_I)
+    update_A!(status_new, status_old, advance_prob_A)
+    update_I1!(status_new, status_old, advance_prob_I1)
+    update_I2!(status_new, status_old, advance_prob_I2)
     
-    update_risk!(status_new, infect_param_A, infect_param_I)
+    update_risk!(status_new, infect_param_A, infect_param_I1, infect_param_I2)
 end
 
 """
-    one_term(status_initial, n_days)
+    one_term(status_initial, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E, advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob, n_days)
 
 Runs through a full term starting in status_initial and running for the specified number of days.
 
 Output: A vector of compartment sizes.
 """
-function one_term(status_initial, infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
-    advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
+function one_term(status_initial, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E,
+    advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob, n_days)
     # Container to store all compartment counts
     trajectories = Array{Int64}(undef, n_days + 1, num_compartments)
     initial_counts = all_compartment_counts(status_initial)
@@ -229,8 +200,8 @@ function one_term(status_initial, infect_param_I, infect_param_A, advance_prob_E
     for j ∈ 1:n_days
         # status_new = deepcopy(status_old) # This doesn't appear to be necessary, and takes a lot of time to run.
         status_new = status_old
-        one_step!(status_new, status_old, day, 
-        infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I, advance_prob_A, A_to_R_prob)
+        one_step!(status_new, status_old, day, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E,
+        advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob)
 
         this_compartment_counts = all_compartment_counts(status_new)
         trajectories[j + 1,:] = this_compartment_counts
@@ -243,61 +214,45 @@ function one_term(status_initial, infect_param_I, infect_param_A, advance_prob_E
     trajectories
 end
 
-2
 
-### Infects a few initial cases and runs the simulation on a copy of status
-### ToDo: Needs unit tests
 """
-    run_sim(status, n_initial_cases, n_days)
+    run_sim(status_raw, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E, advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob, n_initial_cases, n_days)
 
     Create a copy of status, infect the specified number of initial cases, 
     then generate an infection trajectory and return it as a data frame.
 """
-function run_sim(status_raw, infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
-    advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
+function run_sim(status_raw, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E,
+    advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob, n_initial_cases, n_days)
     this_status = deepcopy(status_raw)
 
     ### Introduce a few initial cases
     num_students = length(status_raw["students"])
     inds_infect = sample(1:num_students, n_initial_cases, replace=false)
-    change_compartment!.(Ref(this_status), inds_infect, "I")
+    change_compartment!.(Ref(this_status), inds_infect, "I2")
 
     ### Compute classwise risks
-    compute_risk!.(this_status["classes"], infect_param_A, infect_param_I)
+    compute_risk!.(this_status["classes"], infect_param_A, infect_param_I1, infect_param_I2)
 
 
-    trajectories_mat = one_term(this_status, infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
-    advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
+    trajectories_mat = one_term(this_status, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E,
+    advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob, n_days)
     trajectories_data = DataFrame(trajectories_mat, all_compartments)
 end
 
 
 
 """
-    one_parameter_set(status_raw, M, infect_param_A, infect_param_I, advance_prob_E, E_to_A_prob, recovery_prob_A, recovery_prob_I, n_initial_cases)
+    one_parameter_set(status_raw, M, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E, advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob, n_initial_cases, n_days)
 
 Run M simulation replicates with the specified parameter values on the provided initialized status object.
-
-# Arguments
-- `status_raw`: A status object containing students and classes, but WITHOUT ANY CLASSWISE RISKS
-- `M`: Number of times to replicate the simulation
-- `infect_param_I`: Proportionality constant for infection probability from infected compartment
-- `infect_param_A`: Proportionality constant for infection probability from asymptomatic compartment
-- `advance_prob_E`: Probability of an E moving to either A or I on a particular day
-- `E_to_A_prob`: Probability that an advancement from E is to A
-- `disease_progress_prob`: Proportionality of an A moving to I on a particular day
-- `recovery_prob_A`: Probability of an A moving to R on a particular day
-- `recovery_prob_I`: Probability of an I moving to R on a particular day
-- `n_initial_cases`: Number of students to move to the I compartment before starting each simulation
 """
-function one_parameter_set(status_raw, M, 
-    infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
-    advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
+function one_parameter_set(status_raw, M, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E,
+    advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob, n_initial_cases, n_days)
 
     all_sim_outputs = Vector{Any}(undef, M)
     for i in 1:M
-        all_sim_outputs[i] = run_sim(status_raw, infect_param_I, infect_param_A, advance_prob_E, E_to_A_prob, recovery_prob_I,
-        advance_prob_A, A_to_R_prob, n_initial_cases, n_days)
+        all_sim_outputs[i] = run_sim(status_raw, infect_param_A, infect_param_I1, infect_param_I2, advance_prob_E,
+        advance_prob_A, advance_prob_I1, advance_prob_I2, E_to_A_prob, n_initial_cases, n_days)
     end
 
     return all_sim_outputs
