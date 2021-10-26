@@ -27,14 +27,6 @@ function all_compartment_counts(status, compartments = all_compartments)
     all_counts = status_compartment_count.(Ref(status), compartments)
 end
 
-# Get the number of students in compartment X across time in the provided matrix of compartment counts
-function compartment_trajectory(sim_output, X)
-
-    all_sizes = status_compartment_count.(all_statuses, X)
-    all_sizes
-end
-
-
 
 """
     complete_compartment_trajectories(all_sim_outputs, X)
@@ -45,7 +37,8 @@ Output: A matrix with rows indexing time and columns indexing simulation runs.
 """
 function complete_compartment_trajectories(all_sim_outputs, X)
     @pipe all_sim_outputs |>
-        map(sim_output -> sim_output[!,X], _) |>    # Extract trajectories for this compartment
+        # map(X -> X[1], _) |>                      # Remove redundant nesting
+        map(sim_output -> sim_output[:,X], _) |>    # Extract trajectories for this compartment
         reduce(hcat, _)                             # Staple trajectories together
 end
 
@@ -85,11 +78,6 @@ function trajectory_summaries(sim_output, f)
         reduce(hcat, _) |>                                                      # Staple summaries together
         DataFrame(_, all_compartments)                                          # Convert result to a data frame
 end
-
-
-
-
-
 
 
 # ---------------------------------------------------------------------------- #

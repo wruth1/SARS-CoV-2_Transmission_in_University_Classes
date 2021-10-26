@@ -25,7 +25,7 @@ include("Helper_Functions.jl");
 # ------------------------- Load pre-computed objects ------------------------ #
 # @load "Data/Objects/Status_Raw.jld2"    # Status object without risks
 @load "Data/Objects/All_Status_Raws.jld2"    # Status objects without risks
-@load "Data/Objects/M=2.jld2"           # Simulation results and matching parameter values
+# @load "Data/Objects/M=2.jld2"           # Simulation results and matching parameter values
 
 
 #############################
@@ -159,13 +159,14 @@ all_sim_outputs = Vector{Any}(undef, length(all_parameters))
 
 
 # N = length(all_parameters)
-N = 200
+N = 10
 meter = Progress(N);    # Create progress meter
 update!(meter, 0)       # Initialize progress of meter
 
 # for ii in eachindex(all_parameters)
 Threads.@threads for ii in 1:N
 # for ii in 1:N
+        # for ii in 1:N
 
     # ----------------- Set seed locally for reproducible results ---------------- #
     this_seed = all_seeds[ii]
