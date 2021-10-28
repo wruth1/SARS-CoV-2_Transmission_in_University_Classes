@@ -44,18 +44,24 @@ end
 
 
 """
-    compartment_trajectory_summary(all_sim_outputs, X, f)
+    daily_compartment_summary(all_sim_outputs, X, f)
 
 Applies function f at each time step to all counts of compartment X.
 
 # Example
 ```
-compartment_trajectory_summary(all_sim_output, "S", mean) # compute average trajectory for compartment S
+daily_compartment_summary(all_sim_output, "S", mean) # compute average trajectory for compartment S
 ```
 """
-function compartment_trajectory_summary(all_sim_outputs, X, f)
+function daily_compartment_summary(all_sim_outputs, X, f)
     trajectories = complete_compartment_trajectories(all_sim_outputs, X)
     summary = [f(trajectories[i,:]) for i in 1:(n_days + 1)]
+end
+
+
+function iteration_compartment_summary(all_sim_outputs, X, f)
+    trajectories = complete_compartment_trajectories(all_sim_outputs, X)
+    summary = [f(col) for col in eachcol(trajectories)]
 end
 
 
@@ -74,7 +80,7 @@ trajectory_summaries(sim_outputs, mean) # compute average trajectories
 """
 function trajectory_summaries(sim_output, f)
     @pipe all_compartments |>
-        map(X -> compartment_trajectory_summary(sim_output, X, f), _) |>       # Apply f to each compartment
+        map(X -> daily_compartment_summary(sim_output, X, f), _) |>       # Apply f to each compartment
         reduce(hcat, _) |>                                                      # Staple summaries together
         DataFrame(_, all_compartments)                                          # Convert result to a data frame
 end

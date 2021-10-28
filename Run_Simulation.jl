@@ -27,13 +27,18 @@ include("Helper_Functions.jl");
 @load "Data/Objects/All_Status_Raws.jld2"    # Status objects without risks
 # @load "Data/Objects/M=2.jld2"           # Simulation results and matching parameter values
 
+q = all_status_raws[∞]
+classes = q["classes"]
+w = map(X -> X["size"], classes)
+length(q["students"])
+
 
 #############################
 ### Initialize parameters ###
 #############################
 
-parameter_names = (:infect_prop_A, :infect_prop_I1, :infect_param_I2, :advance_prob_E,
-                    :advance_prob_A, :advance_prob_I1, :advance_prob_I2, :E_to_A_prob, :threshold);
+parameter_names = [:infect_prop_A, :infect_prop_I1, :infect_param_I2, :advance_prob_E,
+                    :advance_prob_A, :advance_prob_I1, :advance_prob_I2, :E_to_A_prob, :threshold];
 
 # ----------------------------- Fixed parameters ----------------------------- #
 if !@isdefined n_days; const n_days = 90; end # Number of days in a term. This might change between terms

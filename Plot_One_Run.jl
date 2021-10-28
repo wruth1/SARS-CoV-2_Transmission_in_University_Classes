@@ -4,8 +4,8 @@
 sim_outputs = all_sim_outputs[1]
 
 ### Plot mean trajectory for I with uncertainty
-I_means = compartment_trajectory_summary(sim_outputs, "I", mean)
-I_sds = compartment_trajectory_summary(sim_outputs, "I", std)
+I_means = daily_compartment_summary(sim_outputs, "I", mean)
+I_sds = daily_compartment_summary(sim_outputs, "I", std)
 
 
 gr()
