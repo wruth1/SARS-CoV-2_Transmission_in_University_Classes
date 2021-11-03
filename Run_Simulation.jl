@@ -27,11 +27,6 @@ include("Helper_Functions.jl");
 @load "Data/Objects/All_Status_Raws.jld2"    # Status objects without risks
 # @load "Data/Objects/M=2.jld2"           # Simulation results and matching parameter values
 
-q = all_status_raws[∞]
-classes = q["classes"]
-w = map(X -> X["size"], classes)
-length(q["students"])
-
 
 #############################
 ### Initialize parameters ###
