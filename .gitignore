@@ -3,7 +3,7 @@ Fix_Package_Loading.jl
 Data/*                          # The data folder is very messy. Best to just exclude it except for what is needed to run the simulation.
 !Data/*.csv                     # Un-exclude the original data
 !Data/Objects/Status_Raw.jld2   # Un-exclude the status object, which takes a non-trivial amount of time to construct.
-!Data/Output/*                  # Un-exclude the Output folder, which contains CSV files for the ANOVAs
+!Data/Output/*.csv              # Un-exclude the Output folder, which contains CSV files for the ANOVAs
 VSCode_Tasks/
 Data/From Cluster/data.zip
 Data/*

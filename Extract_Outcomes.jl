@@ -166,8 +166,8 @@ CSV.write("Data/Output/All_Outbreak_Peaks.csv", peak_data)
 #                              Outbreak Proportion                             #
 # ---------------------------------------------------------------------------- #
 
-### Minimum number of cases to be considered an outbreak
-size = 100
+### Minimum number of cases to be considered an outbreak (1% of total population in network)
+size = total_students / 100
 
 
 """

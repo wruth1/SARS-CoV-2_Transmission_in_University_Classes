@@ -1,0 +1,378 @@
+---
+title: "Fit CII Model"
+author: "William Ruth"
+output: 
+  pdf_document
+---
+
+
+```{r packages, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+
+library(knitr)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(gridExtra)
+library(purrr)
+library(tibble)
+library(ggfortify) # ggplot version of regression diagnostics
+```
+
+
+```{r setup, include=FALSE, cache=TRUE}
+num_students <- 25627
+
+data <- read.csv("C:/Users/willi/Desktop/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Sizes.csv")
+
+num_trials = nrow(data)
+
+# ------------- Replace infinity character in threshold variable ------------- #
+thresh <- data$threshold
+inds_thresh <- thresh == unique(thresh)[4]
+data[inds_thresh, "threshold"] <- "inf"
+data$threshold = factor(data$threshold, levels = c("20", "50", "100", "inf"))
+
+for (i in 1:(ncol(data)-1)) {
+  data[, i] <- factor(data[, i])
+}
+
+for (i in 1:(ncol(data)-2)) {
+  levels(data[,i]) <- c("low", "med", "high")
+}
+
+
+
+get_formula <- function(resp_var, control_var, data, int = TRUE){
+  model_vars = data %>%
+    select(-!!resp_var, -!!control_var) %>%
+    names()
+  
+  # First-order terms
+  (form_str <- paste(model_vars, collapse = " + "))
+  (form_str <- paste(control_var, form_str, sep = " + "))
+  (form_str <- paste(resp_var, form_str, sep = " ~ "))
+  
+  # Second-order terms. Only include interactions with the control variable
+  if (int) {
+    (form_int_str <- paste(model_vars, control_var, sep = "*"))
+    (form_int_str <- paste(form_int_str, collapse = " + "))
+    (form_str <- paste(form_str, form_int_str, sep = " + "))
+  }
+  
+  # Convert string to formula object
+  form = formula(form_str)
+  
+  form
+}
+
+### Use logistic regression to model proportion who are ever infected
+
+data_logit_raw = data %>%
+  mutate(prop = size/num_students) %>%
+  select(-size)
+
+## Build formula for logistic regression
+form = get_formula("prop", "threshold", data_logit_raw)
+
+
+## Fit model with and without interactions
+fit_glm_main <- glm(prop ~ ., family = binomial(), 
+  data = data_logit_raw, weights = rep(num_students, times = num_trials))
+fit_glm_int <- glm(form, family = binomial(), 
+  data = data_logit_raw, weights = rep(num_students, times = num_trials))
+
+fit_glm_main_disper <- glm(prop ~ ., family = quasibinomial(), 
+  data = data_logit_raw, weights = rep(num_students, times = num_trials))
+fit_glm_int_disper <- glm(form, family = quasibinomial(), 
+  data = data_logit_raw, weights = rep(num_students, times = num_trials))
+
+## Extract fitted proportions from models with interactions
+p_hat_int = predict(fit_glm_int, type = "response")
+p_hat_int_disper = predict(fit_glm_int_disper, type = "response")
+
+
+### Estimate SD of Y in each group empirically
+all_SDs_obs_raw = data_logit_raw %>%
+  add_column(p_hat_int = p_hat_int, p_hat_disp = p_hat_int_disper) %>% 
+  group_by(across(infect_prop_A:threshold)) %>%
+  summarise(p_hat_obs = mean(prop), SD_obs = sd(prop),
+    p_hat_int = mean(p_hat_int), p_hat_disp = mean(p_hat_disp),
+    .groups="drop") %>%
+  mutate(SD_theo = sqrt(p_hat_int * (1 - p_hat_int)/sqrt(num_students)), 
+    SD_disp = (p_hat_disp * (1 - p_hat_disp)/sqrt(num_students))) 
+
+all_SDs_obs <- filter(all_SDs_obs_raw,
+  !((threshold == "100") & (SD_obs > 0.15)))
+
+```
+
+# Analysis #
+
+In this document, we fit quasi-binomial GLMs in each of the four class size threshold groups. Note that the extreme outlier in the threshold = 100 group has been removed.
+
+```{r remove_outlier, include = F}
+### Remove extreme outlier from original data frame
+row_remove <- all_SDs_obs_raw %>% 
+  filter((threshold == "100") & (SD_obs > 0.15)) %>% 
+  select(infect_prop_A:threshold)
+
+data_logit <- data_logit_raw %>% 
+  filter(!((infect_prop_A %in% row_remove[[1]]) &
+      (infect_prop_I1 %in% row_remove[[2]]) &
+      (infect_param_I2 %in% row_remove[[3]]) &
+      (advance_prob_E %in% row_remove[[4]]) &
+      (advance_prob_A %in% row_remove[[5]]) &
+      (advance_prob_I1 %in% row_remove[[6]]) &
+      (advance_prob_I2 %in% row_remove[[7]]) &
+      (E_to_A_prob %in% row_remove[[8]]) &
+      (threshold %in% row_remove[[9]])
+    ))
+  
+# # This method also works, but is much slower
+# pred_vars <- setdiff(names(data_logit_raw), c("prop"))
+# check <- pbapply(data_logit_raw, 1, function(X){
+#   all(X[pred_vars] == row_remove)
+# })
+# data_logit <- data_logit_raw[!check,]
+```
+
+
+Before doing any model fitting, we plot a histogram of the CII, both globally and separately by class size threshold, where the counts are of individual runs of our simulation ($N =$ `r formatC(num_students, format = "f", digits = 0)`).
+
+```{r global_CII_hist, fig.cap="\\label{fig:global_hist}Histogram of CII."}
+### Plot a histogram of CIIs across all simulations
+CII_hist <- ggplot(data_logit, aes(x = prop)) +
+  geom_histogram(bins = 500) + xlab("CII")
+  # geom_histogram(aes(y = after_stat(density)), bins = 500)
+plot(CII_hist)
+```
+
+
+```{r group_CII_hist, fig.cap="\\label{fig:group_hist}Histograms of CII for each class size threshold with uniform axis scaling."}
+### Subdivide by class size threshold
+CII_hist_group <- CII_hist + 
+  facet_wrap(~threshold)#, scales = "free")
+plot(CII_hist_group)
+```
+
+```{r group_CII_hist_free, fig.cap="\\label{fig:group_hist_free}Histograms of CII for each class size threshold with heteogeneous axis scaling."}
+### Subdivide by class size threshold, and use free axis labels
+CII_hist_group_free <- CII_hist + 
+  facet_wrap(~threshold, scales = "free")
+plot(CII_hist_group_free)
+```
+
+There are clearly different levels of variability between the different threshold groups. This suggests that we should use an extended quasi-likelihood model with different overdispersion parameters in each group.
+
+The structure of our simulation study includes pure replication within each parameter setting (specifically, we have 10 replicates for each parameter combination). This allows us to investigate the pure replication variability, which informs what we expect to see when we fit our GLM. The following plot gives average CII vs sample variance for each parameter combination (**Footnote: the average and variance are computed over the 10 replicates within a single parameter combination**).
+
+```{r var_fun_plot}
+pure_rep_plot <- ggplot(all_SDs_obs, aes(x = p_hat_obs, y = SD_obs^2)) +
+  geom_point() + facet_wrap(~threshold, scales = "free") +
+  xlab("Average CII") + ylab("Observed Variance")
+plot(pure_rep_plot)
+```
+
+Next, we reproduce these plots but also add a reference line at the variance which is predicted by the binomial distribution (i.e. at $p(1-p)/N$, where $N$ is the number of students, `num_students`).
+
+```{r var_fun_ref_plot}
+pure_rep_plot_ref <- pure_rep_plot +
+  geom_line(aes(y = p_hat_obs*(1 - p_hat_obs)/num_students),
+    color = "red")#, size=1.5)
+plot(pure_rep_plot_ref)
+```
+
+Our data clearly exhibit overdispersion relative to the predictions of a binomial model. 
+
+We now proceed to fit the models to which we have been alluding. First, the four models, with one for each level of class size threshold.
+
+
+```{r fit_models}
+
+### Fit all four models
+### Note: Some gymnastics are being done with the formula object,
+###       because a formula contains an environment, which must
+###       match the context in which the formula is being used
+###       (otherwise weird things can happen)
+form_main <- data_logit %>% 
+  select(-threshold) %>% 
+  get_formula("prop", c(), ., int = F)
+form_str <- paste(deparse(form_main), collapse = "")
+all_thresholds <- unique(data_logit$threshold)
+all_fits <- lapply(all_thresholds, function(thresh){
+  this_data <- filter(data_logit, threshold == !!thresh)
+  this_wts <- rep(num_students, times = nrow(this_data))
+  fit = glm(formula(form_str), this_data, family = quasibinomial(), 
+  weights = this_wts)
+  
+  fit
+})
+
+```
+
+## Diagnostics ##
+
+We now investigate some of the standard diagnostic plots for evaluating GLM fits. Figures \ref{fig:dev_resid} and \ref{fig:pear_resid} give the deviance and Pearson residuals respectively for each class size threshold.
+
+```{r Plot_Dev_Residuals, fig.cap="\\label{fig:dev_resid}Deviance residuals for each class size threshold."}
+### Need to do this from scratch. The plot.lm function isn't well documented so I'm not certain what it's doing, and the ggplot version won't let me put all four plots in a grid.
+
+### Extract info from fitted models
+all_fitted_values <- all_fits %>% map(predict, type = "response") %>% unlist()
+all_dev_resids <- all_fits %>% map(residuals, type="deviance") %>%   unlist()
+all_pear_resids <- all_fits %>% map(residuals, type="pearson") %>%   unlist()
+
+### Get list of class size thresholds
+threshold_list <- data_logit$threshold
+
+### Construct data frame for residual analysis
+data_resid <- tibble(threshold = threshold_list,
+  fitted = all_fitted_values, dev = all_dev_resids,
+  pear = all_pear_resids)
+
+### Construct plot of residuals vs fitted values
+plot_dev_resid <- ggplot(data_resid, aes(x = fitted, y = dev)) +
+  geom_point() + facet_wrap(~threshold, scales = "free") +
+  xlab("Fitted CII") + ylab("Deviance Residual")
+plot_dev_resid
+```
+
+```{r Plot_Pearson_Residuals, , fig.cap="\\label{fig:pear_resid}Pearson residuals for each class size threshold."}
+plot_pear_resid <- ggplot(data_resid, aes(x = fitted, y = pear)) +
+  geom_point() + facet_wrap(~threshold, scales = "free") +
+  xlab("Fitted CII") + ylab("Pearson Residual")
+plot_pear_resid
+```
+
+
+
+# Results #
+
+We now report some summaries. 
+
+## Deviance Changes ##
+
+To start, we extract the deviance improvement provided by each variable when added to a model already containing the other predictors.
+
+```{r group_deviances, cache=TRUE}
+all_deviances <- sapply(all_fits, function(fit){
+  info_raw <- drop1(fit)
+  info <- info_raw$Deviance
+  
+  deltas <- info[-1] - info[1]
+})
+
+# For future reference, get the names of the non-threshold predictors
+pred_names <- data_logit %>% 
+  select(-threshold, -prop) %>%
+  colnames()
+
+colnames(all_deviances) <- all_thresholds
+rownames(all_deviances) <- pred_names
+
+kable(formatC(all_deviances, format = "E", digits = 2),
+  caption="\\label{tab:group_devs}Deviance improvements within each class size threshold.")
+```
+
+For reference, we give the relative change in deviance compared to the largest in each group.
+
+```{r col_rel_devs, echo=F}
+rel_devs <- apply(all_deviances, 2, function(X) X/max(X))
+kable(formatC(rel_devs, format = "G", digits = 2),
+  caption = "\\label{tab:rel_devs}Relative deviance improvements within each class size threshold.")
+```
+
+We also rank the predictors within each group in decreasing order of deviance improvement.
+
+```{r, echo=F}
+ranks <- apply(rel_devs, 2, function(X) rank(-X))
+row.names(ranks) <- pred_names
+kable(ranks, caption="\\label{tab:dev_ranks}Ranked deviance improvements within each class size threshold. 1 has the greatest improvement and 8 has the least.")
+```
+
+
+## Overdispersion Parameter ##
+
+Next, we present the fitted overdispersion parameter from each group.
+
+```{r group_dispers, echo=F}
+all_dispers <- sapply(all_fits, function(fit){
+  summary(fit)$dispersion
+})
+
+names(all_dispers) <- all_thresholds
+
+formatC(all_dispers, format = "f", digits = 0)
+```
+
+## Global Model ##
+
+For reference, we repeat the above analysis on the ordinary quasi-likelihood model. That is, we retain the interaction terms for the mean model, but use a single global overdispersion parameter.
+
+```{r fit_global, include=FALSE}
+fit <- glm(form, data = data_logit, family = quasibinomial(),
+  weights = rep(num_students, times = nrow(data_logit)))
+```
+
+
+The deviance changes for excluding each variable individually from our model (while retaining all others) are as follows.
+
+```{r dev_global, cache=TRUE, echo=FALSE}
+info_raw <- drop1(fit)
+info <- info_raw$Deviance
+deltas <- info[-1] - info[1]
+
+names(deltas) <- data_logit %>% 
+  select(-threshold, -prop) %>%
+  colnames()
+
+formatC(deltas, format = "E", digits = 2)
+```
+
+Similarly, the relative deviance improvements are:
+
+```{r rel_dev_global, include=FALSE}
+formatC(deltas/max(deltas), format = "G", digits = 2)
+```
+
+```{r disper_global, include=FALSE}
+phi_hat <- summary(fit)$dispersion
+```
+
+
+Finally, the fitted global overdispersion parameter is `r round(phi_hat, 0)`, which is the mean of the individual group models' overdispersion parameters.
+
+
+
+
+## Marginal Behaviour of Each Predictor ##
+
+The following figure gives a sequence of boxplots for the CII in our simulation. Each plot corresponds to a single predictor, and each box contains all simulation runs with that level of the predictor.
+
+```{r}
+var_names <- variable.names(data_logit)[1:9]
+
+base_boxplot <- ggplot(data_logit, aes(y = prop))
+all_boxplots <- list(1:9)
+for(i in 1:9){
+  this_plot <- base_boxplot +
+    geom_boxplot(aes_string(x = var_names[i]))
+  all_boxplots[[i]] <- this_plot
+}
+grid.arrange(grobs = all_boxplots, ncol=3)
+```
+
+The threshold variable clearly has the greatest association with CII, so we reproduce that boxplot **with greater resolution**.
+
+```{r}
+all_boxplots[[9]]
+```
+
+
+# Discussion #
+
+In Tables \ref{tab:group_devs}-\ref{tab:dev_ranks}, we see that the infectiousness parameter for the symptomatic group has the largest deviance improvement in every model. Recall that the infectiousness parameter for the symptomatic group gives the absolute proportionality constant for infection probability (proportional to 1 / the square root of the class size). However, the parameters for the presymptomatic and asymptomatic groups are only their relative proportionality constant when compared to the symptomatic group. Thus, increasing or decreasing the infectiousness parameter for the symptomatic group changes the infection probability for all infectious compartments, while the parameters for presymptomatic and asymptomatic only affect their own compartment.
+
+The behaviour of the threshold = 20 group is qualitatively different from the other threshold levels. In Figures \ref{fig:group_hist} and \ref{fig:group_hist_free}, we see that the CIIs clump around 0 with a long right tail when threshold is 20, while the other groups have their mass concentrated above 0.5. 

@@ -143,7 +143,7 @@ for this_threshold in all_thresholds
     all_num_classes[this_threshold] = length(this_status["classes"])
 end
 
-
+total_students = all_num_students[∞]
 
 
 

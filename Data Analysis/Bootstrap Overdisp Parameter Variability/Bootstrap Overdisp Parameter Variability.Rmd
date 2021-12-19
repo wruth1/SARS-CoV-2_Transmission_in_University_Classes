@@ -1,0 +1,173 @@
+---
+title: "Bootstrap Overdispersion Parameter Variability"
+author: "William Ruth"
+date: "29/11/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+### Setup computation
+
+library(dplyr)
+library(pbapply)
+library(magrittr)
+
+# setwd("C:/Users/willi/Desktop/School/Thesis/COVID_Network_Julia")
+
+num_students <- 25627
+
+data <- read.csv("C:/Users/willi/Desktop/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Sizes.csv")
+
+num_trials = nrow(data)
+
+# ------------- Replace infinity character in threshold variable ------------- #
+thresh <- data$threshold
+inds_thresh <- thresh == unique(thresh)[4]
+data[inds_thresh, "threshold"] <- "inf"
+data$threshold = factor(data$threshold, levels = c("20", "50", "100", "inf"))
+
+for (i in 1:(ncol(data)-1)) {
+  data[, i] <- factor(data[, i])
+}
+
+for (i in 1:(ncol(data)-2)) {
+  levels(data[,i]) <- c("low", "med", "high")
+}
+
+
+
+par(mfrow = c(3,3))
+for (i in 1:(ncol(data)-1)){
+  boxplot(data$size ~ data[,i], 
+    xlab = names(data)[i], ylab = "Outbreak Size")
+}
+par(mfrow = c(1,1))
+boxplot(data$size ~ data$threshold, 
+  xlab = "Threshold", ylab = "Outbreak Size")
+
+
+
+get_formula <- function(resp_var, control_var, data){
+  model_vars = data %>%
+    select(-!!resp_var, -!!control_var) %>%
+    names()
+  
+  # First-order terms
+  (form_str <- paste(model_vars, collapse = " + "))
+  (form_str <- paste(control_var, form_str, sep = " + "))
+  (form_str <- paste(resp_var, form_str, sep = " ~ "))
+  
+  # Second-order terms. Only include interactions with the control variable
+  (form_int_str <- paste(model_vars, control_var, sep = "*"))
+  (form_int_str <- paste(form_int_str, collapse = " + "))
+  (form_str <- paste(form_str, form_int_str, sep = " + "))
+  
+  # Convert string to formula object
+  form = formula(form_str)
+  
+  form
+}
+
+### Use logistic regression to model proportion who are ever infected
+
+data_logit = data %>%
+  mutate(prop = size/num_students) %>%
+  select(-size)
+
+## Build formula for logistic regression
+form = get_formula("prop", "threshold", data_logit)
+
+
+## Fit model with interactions
+# fit_glm_int <- glm(form, family = quasibinomial(), 
+#   data = data_logit, weights = rep(num_students, times = num_trials))
+
+```
+
+We use a boostrap analysis with various sample sizes to estimate the standard error of the quasibinomial dispersion parameter.
+
+```{r, cache=TRUE}
+set.seed(1)
+
+all_Ms <- seq(500, 10000, by = 500)
+B = 100
+
+
+### Draw boostrap samples of size M ###
+
+all_bootstrap_SEs = c()
+
+for(i in seq_along(all_Ms)){
+  # print(paste0(i, " of ", length(all_Ms)))
+  M = all_Ms[i]
+  
+  
+  bootstrap_indices <- lapply(1:B, function(b) {
+    sample(1:num_trials, M)
+  })
+  
+  bootstrap_samples = lapply(bootstrap_indices, function(inds) {
+    data_logit[inds, ]
+  })
+  
+  
+  bootstrap_estimates = sapply(bootstrap_samples, function(boot_data) {
+    fit_glm_boot <- glm(
+      form,
+      family = quasibinomial(),
+      data = boot_data,
+      weights = rep(num_students, times = M)
+    )
+    summary(fit_glm_boot)$dispersion
+  })
+  
+
+  all_bootstrap_SEs = c(all_bootstrap_SEs, sd(bootstrap_estimates))
+}
+```
+
+Next, we make some plots of the relationship between the boostrap sample size, $N$, and the estimated standard error.
+
+```{r}
+
+data_boot = data.frame(N = all_Ms,
+  SE = all_bootstrap_SEs)
+
+with(data_boot, plot(N, SE, main = "Bootstrap SE vs Sample Size"))
+
+with(data_boot, plot(log(N), log(SE), xlab = "log(N)", ylab = "log(SE)",
+  main = "log(Bootstrap SE) vs log(Sample Size)"))
+```
+
+It looks like the relationship on the log-scale is approximately linear. Most estimators have standard error decaying like $1/\sqrt{n}$. Let's try fitting a linear regression model to the log-scale data with slope constrained to $-1/2$.
+
+```{r}
+
+data_boot %<>% mutate(Y = log(SE) + 0.5*log(N))
+
+fit = lm(Y ~ 1, data = data_boot)
+intercept = fit$coefficients[1]
+
+with(data_boot, plot(log(N), log(SE), xlab = "log(N)", ylab = "log(SE)",
+  main = "log(Bootstrap SE) vs log(Sample Size)"))
+abline(a = intercept, b = -0.5)
+```
+
+This looks like a pretty good fit. Returning to the original scale, our fit looks similarly reasonable.
+
+```{r}
+SD_Y = exp(intercept)
+with(data_boot, plot(N, SE, main = "Bootstrap SE vs Sample Size"))
+with(data_boot, lines(N, SD_Y / sqrt(N)))
+```
+
+Finally, extrapolating out to our actual sample size of `r num_trials`, we get the following predicted standard error.
+
+```{r}
+SE_phi = SD_Y / sqrt(num_trials)
+SE_phi
+
+```

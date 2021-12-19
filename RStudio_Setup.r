@@ -1,0 +1,1 @@
+setwd("C:/Users/willi/Desktop/School/Thesis/COVID_Network_Julia")
