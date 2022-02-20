@@ -1,0 +1,17 @@
+base
+methods
+datasets
+utils
+grDevices
+graphics
+stats
+knitr
+dplyr
+magrittr
+ggplot2
+gridExtra
+purrr
+tibble
+ggfortify
+latex2exp
+xtable

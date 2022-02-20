@@ -1,0 +1,11 @@
+"0","library(purrr)
+"
+"2","
+Attaching package: ‘purrr’
+
+"
+"2","The following object is masked from ‘package:magrittr’:
+
+    set_names
+
+"

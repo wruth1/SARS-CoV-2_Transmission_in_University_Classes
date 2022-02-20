@@ -1,0 +1,230 @@
+---
+title: "What is GLM Deviance?"
+author: "William Ruth"
+date: "11/01/2022"
+output: pdf_document
+---
+```{r packages, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+
+library(knitr)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(gridExtra)
+library(purrr)
+library(tibble)
+library(ggfortify) # ggplot version of regression diagnostics
+library(latex2exp) # Use latex for plot labels with the TeX() function
+library(xtable)    # Create latex tables
+```
+
+
+```{r setup, include=FALSE, cache=TRUE}
+num_students <- 25627
+
+data <- read.csv("C:/Users/willi/Desktop/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Sizes.csv")
+
+num_trials = nrow(data)
+
+# Number of students remaining in the network for each threshold level
+network_sizes <- c(16866, 23660, 24752, 25627)
+
+# ------------- Replace infinity character in threshold variable ------------- #
+thresh <- data$threshold
+inds_thresh <- thresh == unique(thresh)[4]
+data[inds_thresh, "threshold"] <- "inf"
+data$threshold = factor(data$threshold, levels = c("20", "50", "100", "inf"))
+
+all_thresholds <- unique(data$threshold)
+thresh2size <- function(thresh){
+  switch(thresh,
+    "20" = network_sizes[1],
+    "50" = network_sizes[2],
+    "100" = network_sizes[3],
+    "inf" = network_sizes[4],
+    stop("Invalid threshold level."))
+}
+
+for (i in 1:(ncol(data)-1)) {
+  data[, i] <- factor(data[, i])
+}
+
+for (i in 1:(ncol(data)-2)) {
+  levels(data[,i]) <- c("low", "med", "high")
+}
+
+
+
+get_formula <- function(resp_var, control_var, data, int = TRUE){
+  model_vars = data %>%
+    select(-!!resp_var, -!!control_var) %>%
+    names()
+  
+  # First-order terms
+  (form_str <- paste(model_vars, collapse = " + "))
+  (form_str <- paste(control_var, form_str, sep = " + "))
+  (form_str <- paste(resp_var, form_str, sep = " ~ "))
+  
+  # Second-order terms. Only include interactions with the control variable
+  if (int) {
+    (form_int_str <- paste(model_vars, control_var, sep = "*"))
+    (form_int_str <- paste(form_int_str, collapse = " + "))
+    (form_str <- paste(form_str, form_int_str, sep = " + "))
+  }
+  
+  # Convert string to formula object
+  form = formula(form_str)
+  
+  form
+}
+
+
+### Build vector of proportions
+group_size <- num_trials/4
+all_network_sizes <- rep(network_sizes, 
+  each = group_size)
+data_logit_raw <- data %>% 
+  arrange(threshold) %>% 
+  mutate(network_size = all_network_sizes, 
+    prop = size / network_size) %>% 
+  select(-size, -network_size)
+
+
+### Use logistic regression to model proportion who are ever infected
+
+## Build formula for logistic regression
+form = get_formula("prop", "threshold", data_logit_raw)
+
+
+### Estimate SD of Y in each group empirically
+all_SDs_obs_raw = data_logit_raw %>%
+  group_by(across(infect_prop_A:threshold)) %>%
+  summarise(p_hat_obs = mean(prop), SD_obs = sd(prop),
+    .groups="drop") 
+
+all_SDs_obs <- filter(all_SDs_obs_raw,
+  !((threshold == "100") & (SD_obs > 0.15)))
+
+```
+
+
+```{r remove_outlier, include = F}
+### Remove extreme outlier from original data frame
+row_remove <- all_SDs_obs_raw %>% 
+  filter((threshold == "100") & (SD_obs > 0.15)) %>% 
+  select(infect_prop_A:threshold)
+
+data_logit <- data_logit_raw %>% 
+  filter(!((infect_prop_A %in% row_remove[[1]]) &
+      (infect_prop_I1 %in% row_remove[[2]]) &
+      (infect_param_I2 %in% row_remove[[3]]) &
+      (advance_prob_E %in% row_remove[[4]]) &
+      (advance_prob_A %in% row_remove[[5]]) &
+      (advance_prob_I1 %in% row_remove[[6]]) &
+      (advance_prob_I2 %in% row_remove[[7]]) &
+      (E_to_A_prob %in% row_remove[[8]]) &
+      (threshold %in% row_remove[[9]])
+    ))
+  
+# # This method also works, but is much slower
+# pred_vars <- setdiff(names(data_logit_raw), c("prop"))
+# check <- pbapply(data_logit_raw, 1, function(X){
+#   all(X[pred_vars] == row_remove)
+# })
+# data_logit <- data_logit_raw[!check,]
+```
+
+
+
+First, extract the threshold=20 group and fit a main-effects quasi-binomial GLM
+
+```{r Fit_Model}
+thresh <- "20"
+
+data <- data_logit %>% 
+  filter(threshold==thresh) %>% 
+  select(-threshold)
+weights <- rep(thresh2size(thresh), times = nrow(data))
+
+fit <- glm(prop ~ ., data = data, family = quasibinomial(),
+  weights = weights)
+```
+
+Define some formulas for what I think the deviance might be. First, is formula (9.4) in McCullagh and Nelder. This is -2 times the integrated quasi-likelihood. My second guess is the same formula, but with every (additive) term not depending on the parameters removed.
+
+```{r Deviance_Formulas}
+n <- thresh2size(thresh)
+
+### This version just computes the formula given in McCullagh and Nelder
+get_dev1 <- function(mu, y, n){
+  A <- y*log(y/mu)
+  B <- (y-1)*log((1-y)/(1-mu))
+  
+  2*n*(A - B)
+}
+
+### This version drops any additive terms which do not depend on mu. This also matches the formula McC & N give for the binomial quasi-likeihood.
+get_dev2 <- function(mu, y, n){
+  A <- y*log(mu/(1-mu))
+  B = log(1-mu)
+  
+  -2*n*(A+B)
+}
+
+```
+
+
+Next, extract fitted values and compute some guesses for what the deviance might be.
+
+```{r Guess_Deviances}
+y <- data$prop
+mu <- predict(fit, type = "response")
+
+devs1 <- map2_dbl(y, mu, ~get_dev1(.y, .x, n))
+devs2 <- map2_dbl(y, mu, ~get_dev2(.y, .x, n))
+
+dev_guess1 <- sum(devs1)
+dev_guess2 <- sum(devs2)
+```
+
+Finally, get the deviance from the fitted glm object and check our guesses.
+
+```{r}
+fitted_dev <- fit$deviance
+
+
+print(paste("Fitted deviance:", fitted_dev))
+print(paste("First guess:", dev_guess1))
+print(paste("Second guess:", dev_guess2))
+
+if(fitted_dev == dev_guess1){
+  print("Guess 1 matches.")
+} else if(fitted_dev == dev_guess2){
+  print("Guess 2 matches.")
+} else{
+  print("Neither guess matches.")
+}
+
+```
+
+
+```{r}
+set.seed(1)
+
+mu <- 0
+
+N <- 10000
+
+X <- rnorm(N, mean = mu)
+
+Y <- log(dnorm(X))
+Z <- log(dnorm(X, mean = mean(X)))
+
+W <- 2 * cumsum(Z - Y)
+# W
+
+plot(W, type = "l")
+```
+

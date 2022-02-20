@@ -1,14 +1,16 @@
 
+###* The Infinities package is a better version of Infinity. In particular, Infinities doesn't print as an ugly string of type specifying code. I have stuck with the latter, uglier package for compatibility reasons, but if I rerun things it would be great to switch to Infinities.
+
 using Plots             # For plotting
 using Random            # For better sampling
 using Distributions     # ?
 using DataFrames        # For R-like data frames
 using CSV               # For Read_Data.jl
+using JLD2              # For storing and importing Julia objects using @save and @load
 using Statistics        # For faster computation of standard deviations
 using ProgressMeter     # To track progress for long loops
 using Pipe              # Improved pipe operator
-using JLD2              # Save and load variables
-using Infinity          # Adds the numbers ∞ and -∞
+using Infinity          # Adds the numbers ∞ and -∞. Infinities is better but might not be compatible.
 using StatsPlots        # For plotting variables in data frames
 using LightGraphs       # For graph functions
 using MatrixNetworks    # For graph functions on adjacency matrices *************** I don't think this one is needed
@@ -17,7 +19,7 @@ using SparseArrays      # For sparse matrix multiplication
 
 
 Random.seed!(21131346)
-M = 2 # Number of times to replicate each parameter combination
+M = 10 # Number of times to replicate each parameter combination
 
 
 include("Helper_Functions.jl");
@@ -89,7 +91,6 @@ const recovery_prob_I = 1/11.8 # Probability of an I moving to R on a particular
 # ### Useful global values
 # advance_prob_A = 1 - (1 - disease_progress_prob) * (1 - recovery_prob_A) # Probability of leaving A on a particular day
 # A_to_R_prob = recovery_prob_A / (disease_progress_prob + recovery_prob_A)       # Probability of moving to R conditional on leaving A
-
 
 
 

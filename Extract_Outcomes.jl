@@ -15,66 +15,82 @@ file_addresses = "Data/Objects/M=10/" .* file_list
 # ---------------------------------------------------------------------------- #
 
 
-# function build_size_data(file_addresses, j)
-#     ### Read dataset and extract contents
-#     output = load(file_addresses[j])
+function build_size_data(file_addresses, j)
+    ### Read dataset and extract contents
+    output = load(file_addresses[j])
 
-#     pars_raw = output["parameters"]
-#     info = output["output"]
+    pars_raw = output["parameters"]
+    info = output["output"]
 
 
-#     ### Extract some useful values
-#     M = length(info)    # Number of replicates
-#     p = length(pars_raw)    # Number of parameters
-#     num_students = sum(info[1][1,:])
+    ### Extract some useful values
+    M = length(info)    # Number of replicates
+    p = length(pars_raw)    # Number of parameters
+    num_students = sum(info[1][1,:])
 
-#     ### Convert threshold parameter to an appropriate string
-#     T_num = pars_raw[end]
-#     T_str_raw = string(T_num)
-#     T_str_end = match(r"\(.+$", T_str_raw).match
-#     T_str = match(r"[^\(\)]+", T_str_end).match
+    ### Convert threshold parameter to an appropriate string
+    T_num = pars_raw[end]
+    T_str_raw = string(T_num)
+    T_str_end = match(r"\(.+$", T_str_raw).match
+    T_str = match(r"[^\(\)]+", T_str_end).match
     
-#     ### Create new parameter vector
-#     pars = Vector{Any}(undef, p)
-#     for i in 1:(p-1)
-#         pars[i] = pars_raw[i]
-#     end
-#     pars[end] = T_str
+    ### Create new parameter vector
+    pars = Vector{Any}(undef, p)
+    for i in 1:(p-1)
+        pars[i] = pars_raw[i]
+    end
+    pars[end] = T_str
 
 
-# ### Get total size of each outbreak
-#     all_sizes = num_students .- iteration_compartment_summary(info, "S", minimum)
+### Get total size of each outbreak
+    all_sizes = num_students .- iteration_compartment_summary(info, "S", minimum)
 
 
-# ### Construct array of parameters
-#     array_pars = Array{Any}(undef, M, p)
-#     for i in 1:M
-#         array_pars[i,:] .= pars
-#     end
+### Construct array of parameters
+    array_pars = Array{Any}(undef, M, p)
+    for i in 1:M
+        array_pars[i,:] .= pars
+    end
 
 
-# ### Convert parameter array to a data frame
-#     size_data = DataFrame(array_pars, parameter_names)
+### Convert parameter array to a data frame
+    size_data = DataFrame(array_pars, parameter_names)
 
-# ### Add outbreak sizes
-#     size_data[:,"size"] = all_sizes
+### Add outbreak sizes
+    size_data[:,"size"] = all_sizes
 
-#     size_data
-# end
-
-
-
-# all_size_data_pieces = @showprogress [build_size_data(file_addresses, i) for i in eachindex(file_addresses) ]
-
-# size_data = all_size_data_pieces[1]
-# for i in 2:length(all_size_data_pieces)
-#     append!(size_data, all_size_data_pieces[i])
-# end
-
-# CSV.write("Data/Output/All_Outbreak_Sizes.csv", size_data)
+    size_data
+end
 
 
 
+all_size_data_pieces = @showprogress [build_size_data(file_addresses, i) for i in eachindex(file_addresses) ]
+
+size_data = all_size_data_pieces[1]
+for i in 2:length(all_size_data_pieces)
+    append!(size_data, all_size_data_pieces[i])
+end
+
+CSV.write("Data/Output/All_Outbreak_Sizes.csv", size_data)
+
+
+
+# ------------------------- Check on stalled setting ------------------------- #
+to_match = (0.4, 0.63, 0.141, 0.168, 0.138, 0.833, 0.092, 0.26, InfExtendedReal{Int64}(100))
+ind_match = findall(Ref(to_match) .==  all_parameters)[1]
+
+file_name = "p=$ind_match.jld2"
+file_address = "Data/Objects/M=10/" * file_name
+matching_runs = load(file_address)
+matching_data = matching_runs["output"]
+
+matching_CIIs = iteration_compartment_summary(matching_data, "S", minimum)
+ind_stall = argmax(matching_CIIs)
+data_stall = matching_data[ind_stall]
+
+print(data_stall[:,:I2])
+print(data_stall[:,:E])
+plot(data_stall[:,:I2])
 
 
 
@@ -159,6 +175,23 @@ end
 CSV.write("Data/Output/All_Outbreak_Peaks.csv", peak_data)
 
 
+
+# ------------------------- Check on stalled setting ------------------------- #
+to_match = (0.4, 0.63, 0.141, 0.168, 0.138, 0.833, 0.092, 0.26, InfExtendedReal{Int64}(100))
+ind_match = findall(Ref(to_match) .==  all_parameters)[1]
+
+file_name = "p=$ind_match.jld2"
+file_address = "Data/Objects/M=10/" * file_name
+matching_runs = load(file_address)
+matching_data = matching_runs["output"]
+
+matching_peaks = get_peak_size.(matching_data)
+ind_stall = argmin(matching_peaks)
+data_stall = matching_data[ind_stall]
+
+print(data_stall[:,:I2])
+print(data_stall[:,:E])
+plot(data_stall[:,:I2])
 
 
 

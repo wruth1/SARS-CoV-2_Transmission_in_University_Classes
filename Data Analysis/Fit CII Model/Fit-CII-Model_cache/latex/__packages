@@ -1,8 +1,0 @@
-base
-dplyr
-magrittr
-ggplot2
-gridExtra
-purrr
-tibble
-knitr
