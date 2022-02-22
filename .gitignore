@@ -8,16 +8,21 @@ VSCode_Tasks/
 Data/From Cluster/data.zip
 Data/*
 
-# Exclude cache from model fitting
-Data\ Analysis/Fit\ CII\ Model/**
-!Data\ Analysis/Fit\ CII\ Model/*.Rmd
-!Data\ Analysis/Fit\ CII\ Model/*.pdf
-Data\ Analysis/Logistic\ Regression/Fit\ CII\ Model/**
-!Data\ Analysis/Logistic\ Regression/Fit\ CII\ Model/*.Rmd
-!Data\ Analysis/Logistic\ Regression/Fit\ CII\ Model/*.pdf
-Data\ Analysis/Fit\ Peak\ Model/**
-!Data\ Analysis/Fit\ Peak\ Model/*.Rmd
-!Data\ Analysis/Fit\ Peak\ Model/*.pdf
-Data\ Analysis/Logistic\ Regression/Fit\ Peak\ Model/**
-!Data\ Analysis/Logistic\ Regression/Fit\ Peak\ Model/*.Rmd
-!Data\ Analysis/Logistic\ Regression/Fit\ Peak\ Model/*.pdf
+# # Exclude cache from model fitting
+# Data\ Analysis/Fit\ CII\ Model/**
+# !Data\ Analysis/Fit\ CII\ Model/*.Rmd
+# !Data\ Analysis/Fit\ CII\ Model/*.pdf
+# Data\ Analysis/Logistic\ Regression/Fit\ CII\ Model/**
+# !Data\ Analysis/Logistic\ Regression/Fit\ CII\ Model/*.Rmd
+# !Data\ Analysis/Logistic\ Regression/Fit\ CII\ Model/*.pdf
+# Data\ Analysis/Fit\ Peak\ Model/**
+# !Data\ Analysis/Fit\ Peak\ Model/*.Rmd
+# !Data\ Analysis/Fit\ Peak\ Model/*.pdf
+# Data\ Analysis/Logistic\ Regression/Fit\ Peak\ Model/**
+# !Data\ Analysis/Logistic\ Regression/Fit\ Peak\ Model/*.Rmd
+# !Data\ Analysis/Logistic\ Regression/Fit\ Peak\ Model/*.pdf
+
+# Hopefully, exclude everything I don't want
+# I.e. Cached data from RMarkdown files
+**/*_cache/**
+**/*_files/**
