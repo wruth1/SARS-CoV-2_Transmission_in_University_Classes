@@ -1,0 +1,28 @@
+"0","all_hists_fixed <- list()
+for(i in seq_along(all_thresholds)){
+  this_thresh <- all_thresholds[i]
+  
+  this_data <- data_logit %>% 
+    filter(threshold == this_thresh)
+  
+  this_plot <- ggplot(this_data, aes(x = prop)) +
+  xlab(""CII"") + theme(plot.title = element_text(hjust = 0.5)) +
+    ggtitle(this_thresh) + xlim(0, 1) + geom_histogram(bins = 500)
+  
+  all_hists_fixed[[i]] <- this_plot
+}
+
+CII_hist_group_fixed <- grid.arrange(grobs = all_hists_fixed, nrow = 2, ncol = 2)
+"
+"2","Warning:"
+"2"," Removed 2 rows containing missing values (geom_bar).
+"
+"2","Warning:"
+"2"," Removed 2 rows containing missing values (geom_bar).
+"
+"2","Warning:"
+"2"," Removed 2 rows containing missing values (geom_bar).
+"
+"2","Warning:"
+"2"," Removed 2 rows containing missing values (geom_bar).
+"

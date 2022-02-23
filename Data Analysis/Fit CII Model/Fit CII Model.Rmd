@@ -173,63 +173,114 @@ Before doing any model fitting, we plot a histogram of the CII, both globally an
 ### Plot a histogram of CIIs across all simulations
 CII_hist <- ggplot(data_logit, aes(x = prop)) +
   geom_histogram(bins = 500) + xlab("CII")
-  # geom_histogram(aes(y = after_stat(density)), bins = 500)
 plot(CII_hist)
 ```
 
 
 ```{r group_CII_hist, fig.cap="\\label{fig:group_hist}Histograms of CII for each class size threshold with uniform axis scaling."}
-### Subdivide by class size threshold
-CII_hist_group <- CII_hist + 
-  facet_wrap(~threshold) + xlim(0,1)
-plot(CII_hist_group)
+all_hists_fixed <- list()
+for(i in seq_along(all_thresholds)){
+  this_thresh <- all_thresholds[i]
+  
+  this_data <- data_logit %>% 
+    filter(threshold == this_thresh)
+  
+  this_plot <- ggplot(this_data, aes(x = prop)) +
+  xlab("CII") + theme(plot.title = element_text(hjust = 0.5)) +
+    ggtitle(this_thresh) + xlim(0, 1) + geom_histogram(bins = 500)
+  
+  all_hists_fixed[[i]] <- this_plot
+}
 
-jpeg("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\CII_Analysis\\CII_hist_homo.jpeg")
-plot(CII_hist_group)
-dev.off()
+CII_hist_group_fixed <- grid.arrange(grobs = all_hists_fixed, nrow = 2, ncol = 2)
+
+ggsave("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\CII_Analysis\\CII_hist_homo.jpeg",
+       plot = CII_hist_group_fixed)
+
 ```
 
 ```{r group_CII_hist_free, fig.cap="\\label{fig:group_hist_free}Histograms of CII for each class size threshold with heteogeneous axis scaling."}
-### Subdivide by class size threshold, and use free axis labels
-CII_hist_group_free <- CII_hist + 
-  facet_wrap(~threshold, scales = "free")
-plot(CII_hist_group_free)
+# Need different bin parameters across threshold levels. Use grid.arrange() ----
 
-# possible_vals_raw <- seq(0, 1, by = 1/num_students)
-# possible_vals <- data.frame(val = possible_vals_raw)
-# inf_vals <- possible_vals %>% 
-#   filter(q > 0.88, q < 0.94) %>% 
-#   unlist()
-# 
-# inf_props <- data_logit %>% 
-#   filter(threshold == "inf") %>% 
-#   select(prop) %>% 
-#   unlist()
-# 
-# obs_inf_vals <- inf_props %>% 
-#   unique() %>% 
-#   sort()
-# 
-# obs_inf_vals %in% inf_vals
+## First, construct the four plots
+all_hists_free <- list()
+for(i in seq_along(all_thresholds)){
+  this_thresh <- all_thresholds[i]
+  
+  this_data <- data_logit %>% 
+    filter(threshold == this_thresh)
+  
+  this_plot <- ggplot(this_data, aes(x = prop)) +
+  xlab("CII") + theme(plot.title = element_text(hjust = 0.5)) +
+    ggtitle(this_thresh)
+
+  
+  if(this_thresh == "inf"){
+    this_plot <- this_plot + geom_histogram(binwidth = 2/num_students)
+  } else{
+    this_plot <- this_plot + geom_histogram(bins = 500)
+  }
+  
+  all_hists_free[[i]] <- this_plot
+}
+
+CII_hist_group_free <- grid.arrange(grobs = all_hists_free, nrow = 2, ncol = 2,
+                                    rownames = "Test")
+
+ggsave("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\CII_Analysis\\CII_hist_hetero.jpeg",
+       plot = CII_hist_group_free)
+
+
+
+
 # 
 # num_unique_vals <- function(X){
-#   X %>% 
-#     unique() %>% 
-#     unlist() %>% 
+#   X %>%
+#     unique() %>%
+#     unlist() %>%
 #     length()
 # }
 # 
-# data_logit %>% 
-#   group_by(threshold) %>% 
+# num_vals <- data_logit %>%
+#   group_by(threshold) %>%
 #   summarise(num_unique_vals(prop))
+# 
+# 
+# data_inf_props <- data.frame(prop = inf_props)
+# hist_inf <- ggplot(data_inf_props, aes(x = prop)) +
+#   geom_histogram(bins = 1500)
+# plot(hist_inf)
+# 
+# q <- diff(inf_props)
+# 
+# w <- stat_bin(aes(x = prop), data_inf_props, bins = 1500)
+# 
+# num_breaks <- 1500
+# bins <- seq(min(inf_props), max(inf_props), length.out = num_breaks + 1)
+# hist_info <- hist(inf_props, breaks = bins)
+# bin_counts <- hist_info$counts
+# 
+# diff_info <- diff(bin_counts)
+# freqs <- c(0, bin_counts)
+# 
+# plot(bins, freqs)
+# 
+# 
+# jumps <- c()
+# 
+# for (j in 2:(num_breaks - 2)) {
+#   A <- mean(diff_info[j - 1], diff_info[j + 2])
+#   B <- mean(diff_info[j], diff_info[j + 1])
+#   print(j)
+#   print(paste("A:", A, "| B:", B))
+#   if(A == 0 & B == 0) next
+#   if (B / A > 2) {
+#     jumps <- c(jumps, bins[j])
+#   }
+# }
+# 
 
-jpeg("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\CII_Analysis\\CII_hist_hetero.jpeg")
-plot(CII_hist_group_free)
-dev.off()
 
-# jpeg("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Weird_CII_Histograms.jpeg")
-# plot(CII_hist_group_free)
-# dev.off()
 ```
 
 

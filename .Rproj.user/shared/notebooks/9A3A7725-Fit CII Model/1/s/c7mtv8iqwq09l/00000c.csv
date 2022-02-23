@@ -1,6 +1,0 @@
-"0",""
-"0","### Plot a histogram of CIIs across all simulations"
-"0","CII_hist <- ggplot(data_logit, aes(x = prop)) +"
-"0","  geom_histogram(bins = 500) + xlab(""CII"")"
-"0","  # geom_histogram(aes(y = after_stat(density)), bins = 500)"
-"0","plot(CII_hist)"

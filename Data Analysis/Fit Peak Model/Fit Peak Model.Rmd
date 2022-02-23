@@ -25,7 +25,9 @@ library(xtable)    # Create latex tables
 ```{r setup, include=FALSE, cache=TRUE}
 num_students <- 25627
 
-data <- read.csv("C:/Users/willi/Desktop/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Peaks.csv")
+data <- 
+    read.csv("D:/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Peaks.csv")
+
 
 num_trials = nrow(data)
 
@@ -176,18 +178,110 @@ plot(peak_hist)
 ```
 
 
-```{r group_peak_hist, fig.cap="\\label{fig:group_hist}Histograms of peak size for each class size threshold with uniform axis scaling."}
-### Subdivide by class size threshold
-peak_hist_group <- peak_hist + 
-  facet_wrap(~threshold)#, scales = "free")
-plot(peak_hist_group)
+```{r group_peak_hist, fig.cap="\\label{fig:group_hist}Histograms of peak outbreak size for each class size threshold with uniform axis scaling."}
+all_hists_fixed <- list()
+for(i in seq_along(all_thresholds)){
+  this_thresh <- all_thresholds[i]
+  
+  this_data <- data_logit %>% 
+    filter(threshold == this_thresh)
+  
+  this_plot <- ggplot(this_data, aes(x = prop)) +
+  xlab("Peak Size") + theme(plot.title = element_text(hjust = 0.5)) +
+    ggtitle(this_thresh) + xlim(0, 1) + geom_histogram(bins = 500)
+  
+  all_hists_fixed[[i]] <- this_plot
+}
+
+peak_hist_group_fixed <- grid.arrange(grobs = all_hists_fixed, nrow = 2, ncol = 2)
+
+ggsave("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\peak_hist_homo.jpeg",
+       plot = peak_hist_group_fixed)
+
 ```
 
-```{r group_peak_hist_free, fig.cap="\\label{fig:group_hist_free}Histograms of peak size for each class size threshold with heteogeneous axis scaling."}
-### Subdivide by class size threshold, and use free axis labels
-peak_hist_group_free <- peak_hist + 
-  facet_wrap(~threshold, scales = "free")
-plot(peak_hist_group_free)
+```{r group_peak_hist_free, fig.cap="\\label{fig:group_hist_free}Histograms of peak outbreak size for each class size threshold with heteogeneous axis scaling."}
+# Need different bin parameters across threshold levels. Use grid.arrange() ----
+
+## First, construct the four plots
+all_hists_free <- list()
+for(i in seq_along(all_thresholds)){
+  this_thresh <- all_thresholds[i]
+  
+  this_data <- data_logit %>% 
+    filter(threshold == this_thresh)
+  
+  this_plot <- ggplot(this_data, aes(x = prop)) +
+  xlab("Peak Size") + theme(plot.title = element_text(hjust = 0.5)) +
+    ggtitle(this_thresh)
+
+  
+  if(this_thresh == "inf"){
+    this_plot <- this_plot + geom_histogram(binwidth = 2/num_students)
+  } else{
+    this_plot <- this_plot + geom_histogram(bins = 500)
+  }
+  
+  all_hists_free[[i]] <- this_plot
+}
+
+peak_hist_group_free <- grid.arrange(grobs = all_hists_free, nrow = 2, ncol = 2,
+                                    rownames = "Test")
+
+ggsave("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\peak_hist_hetero.jpeg",
+       plot = peak_hist_group_free)
+
+
+
+
+# 
+# num_unique_vals <- function(X){
+#   X %>%
+#     unique() %>%
+#     unlist() %>%
+#     length()
+# }
+# 
+# num_vals <- data_logit %>%
+#   group_by(threshold) %>%
+#   summarise(num_unique_vals(prop))
+# 
+# 
+# data_inf_props <- data.frame(prop = inf_props)
+# hist_inf <- ggplot(data_inf_props, aes(x = prop)) +
+#   geom_histogram(bins = 1500)
+# plot(hist_inf)
+# 
+# q <- diff(inf_props)
+# 
+# w <- stat_bin(aes(x = prop), data_inf_props, bins = 1500)
+# 
+# num_breaks <- 1500
+# bins <- seq(min(inf_props), max(inf_props), length.out = num_breaks + 1)
+# hist_info <- hist(inf_props, breaks = bins)
+# bin_counts <- hist_info$counts
+# 
+# diff_info <- diff(bin_counts)
+# freqs <- c(0, bin_counts)
+# 
+# plot(bins, freqs)
+# 
+# 
+# jumps <- c()
+# 
+# for (j in 2:(num_breaks - 2)) {
+#   A <- mean(diff_info[j - 1], diff_info[j + 2])
+#   B <- mean(diff_info[j], diff_info[j + 1])
+#   print(j)
+#   print(paste("A:", A, "| B:", B))
+#   if(A == 0 & B == 0) next
+#   if (B / A > 2) {
+#     jumps <- c(jumps, bins[j])
+#   }
+# }
+# 
+
+
 ```
 
 
@@ -223,7 +317,7 @@ peak_hist_group <- peak_hist +
   facet_wrap(~threshold) + xlim(0,1)
 plot(peak_hist_group)
 
-jpeg("C:\\Users\\willi\\sfuvault2\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Hist_Homo.jpeg")
+jpeg("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Hist_Homo.jpeg")
 plot(peak_hist_group)
 dev.off()
 ```
@@ -234,7 +328,7 @@ peak_hist_group_free <- peak_hist +
   facet_wrap(~threshold, scales = "free")
 plot(peak_hist_group_free)
 
-jpeg("C:\\Users\\willi\\sfuvault2\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Hist_Hetero.jpeg")
+jpeg("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Hist_Hetero.jpeg")
 plot(peak_hist_group_free)
 dev.off()
 ```
@@ -261,7 +355,7 @@ pure_rep_plot_ref <- pure_rep_plot +
     color = "red")#, size=1.5)
 plot(pure_rep_plot_ref)
 
-jpeg("C:\\Users\\willi\\sfuvault2\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Disper_Ref.jpeg")
+jpeg("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Disper_Ref.jpeg")
 plot(pure_rep_plot_ref)
 dev.off()
 ```
@@ -541,7 +635,7 @@ pure_rep_plot_ref_scaled <- ggplot(data_ref_scaled, aes(x = p_hat_obs, y = SD_ob
     color = "blue")
 plot(pure_rep_plot_ref_scaled)
 
-jpeg("C:\\Users\\willi\\sfuvault2\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Disper_Ref_Scaled.jpeg")
+jpeg("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Disper_Ref_Scaled.jpeg")
 plot(pure_rep_plot_ref_scaled)
 dev.off()
 ```
@@ -609,7 +703,7 @@ for(i in 1:9){
   all_boxplots[[i]] <- this_plot
 }
 grid.arrange(grobs = all_boxplots, ncol=3)
-jpeg("C:\\Users\\willi\\sfuvault2\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Boxplots.jpeg")
+jpeg("D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Peak_Size_Analysis\\Peak_Boxplots.jpeg")
 grid.arrange(grobs = all_boxplots, ncol=3)
 dev.off()
 ```

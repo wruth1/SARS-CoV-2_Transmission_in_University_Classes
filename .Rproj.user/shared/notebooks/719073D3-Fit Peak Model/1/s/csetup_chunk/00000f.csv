@@ -1,0 +1,10 @@
+"0","num_students <- 25627"
+"0",""
+"0","data <- read.csv(""C:/Users/willi/Desktop/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Peaks.csv"")"
+"2","Warning in file(file, ""rt"") :"
+"2","
+ "
+"2"," cannot open file 'C:/Users/willi/Desktop/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Peaks.csv': No such file or directory
+"
+"2","Error in file(file, ""rt"") : cannot open the connection
+"
