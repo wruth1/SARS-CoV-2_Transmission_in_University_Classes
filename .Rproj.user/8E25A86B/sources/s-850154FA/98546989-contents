@@ -17,7 +17,7 @@ library(rpart.plot)
 num_students <- 25627
 
 data <-
-  read.csv("D:/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Sizes.csv")
+  read.csv("D:/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Peaks.csv")
 
 num_trials = nrow(data)
 
@@ -52,7 +52,6 @@ for (i in 1:(ncol(data) - 2)) {
 
 
 
-
 get_formula <- function(resp_var, control_var, data, int = TRUE) {
   model_vars = data %>%
     select(-!!resp_var,-!!control_var) %>%
@@ -84,8 +83,8 @@ all_network_sizes <- rep(network_sizes,
 data_logit_raw <- data %>%
   arrange(threshold) %>%
   mutate(network_size = all_network_sizes,
-         prop = size / network_size) %>%
-  select(-size,-network_size)
+         prop = peak / network_size) %>%
+  select(-peak, -network_size)
 
 
 
@@ -103,11 +102,13 @@ all_SDs_obs_raw = data_logit_raw %>%
   )
 
 all_SDs_obs <- filter(all_SDs_obs_raw,!((threshold == "100") &
-                                          (SD_obs > 0.15)))
+                                          (SD_obs > 0.03)))
+
+
 
 ### Remove extreme outlier from original data frame
 row_remove <- all_SDs_obs_raw %>%
-  filter((threshold == "100") & (SD_obs > 0.15)) %>%
+  filter((threshold == "100") & (SD_obs > 0.03)) %>%
   select(infect_prop_A:threshold)
 
 data_logit <- data_logit_raw %>%
@@ -174,6 +175,7 @@ plot_by_size <- function(fit, num_splits, type, extra, thresh){
 
 
 
+
 ##################################################
 ### Fit trees, make plots, measure performance ###
 ##################################################
@@ -195,8 +197,6 @@ global_rel_GOF <- global_GOF
 CV_summ <- array(0, dim = c(4,4))
 rownames(CV_summ) <- all_thresholds
 colnames(CV_summ) <- c("1se-splits", "1se-rel err", "min-splits", "min-rel err")
-
-
 
 
 for (this_thresh in all_thresholds) {
@@ -234,14 +234,13 @@ for (this_thresh in all_thresholds) {
   
   jpeg(
     paste0(
-      "D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Tree_Splits\\CII-First_25-",
+      "D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Tree_Splits\\Peak-First_25-",
       this_thresh,
       ".jpeg"
     )
-  )
+  )  
   plot_by_size(fit_full, 25, type = 0, extra = 0, thresh = this_thresh)
   dev.off()
-  
   
   #######################
   ### Fit CV-Min Tree ###
@@ -333,8 +332,6 @@ for (this_thresh in all_thresholds) {
     mutate(rxerror = sqrt(xerror))
   
   
-  
-  
   ##############################################
   ### Plot full trajectory of subtree errors ###
   ##############################################
@@ -348,20 +345,21 @@ for (this_thresh in all_thresholds) {
 
     ggtitle(paste0("Threshold = ", this_thresh)) +
     theme(plot.title = element_text(hjust = 0.5)) +
-    geom_vline(xintercept = CV_splits) + ylim(c(0,NA))
+    geom_vline(xintercept = CV_splits) + ylim(c(0, NA))
     
   
   plot(plot_full)  
   
   jpeg(
     paste0(
-      "D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Tree_Errors\\Full_CII_Tree_Errors-",
+      "D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Tree_Errors\\Full_Peak_Tree_Errors-",
       this_thresh,
       ".jpeg"
     )
   )
   plot(plot_full)
   dev.off()
+  
   
   
   
@@ -372,11 +370,14 @@ for (this_thresh in all_thresholds) {
   
   ### Get CV errors for reasonably sized subtrees
   tree_sizes <- c(10, 25, 50, 100, 200)
+  if(this_thresh == "100") tree_sizes[1] = 9    # Hacky solution to no 10-split tree
   errs_small <- info %>%
     filter(nsplit %in% tree_sizes) %>%
     select(rxerror) %>%
     unlist() %>%
     as_tibble()
+  if(this_thresh == "100") tree_sizes[1] = 10   # Undo hacky solution to no 10-split tree
+  
   colnames(errs_small) <- "rxerror"
   errs_small %<>% 
     mutate(rabs_xerror = rxerror * stump_rmse,
@@ -407,7 +408,7 @@ for (this_thresh in all_thresholds) {
   
   jpeg(
     paste0(
-      "D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Tree_Errors\\Focused_CII_Tree_Errors-",
+      "D:\\SFU Vault\\CornellStudy\\Tex\\Plots\\Tree_Errors\\Focused_Peak_Tree_Errors-",
       this_thresh,
       ".jpeg"
     )
@@ -445,9 +446,11 @@ for (this_thresh in all_thresholds) {
   
   ### Make a list with all trees of interest
   all_trees <- list(fit_min, fit_1se)
+  if(this_thresh == "100") tree_sizes[1] = 9    # Hacky solution to no 10-split tree
   for(size in rev(tree_sizes)){
     all_trees <- append(all_trees, list(prune_size(fit_full, size)))
   }
+  if(this_thresh == "100") tree_sizes[1] = 10   # Undo hacky solution to no 10-split tree
   
   ### Extract variable importances from trees of interest and store in all_imps
   for(j in seq_along(all_trees)){
@@ -460,9 +463,6 @@ for (this_thresh in all_thresholds) {
   
   
 }
-
-
-
 
 # Variable Importance -----------------------------------------------------
 
@@ -485,8 +485,8 @@ for(thresh in all_thresholds){
 
 ### CV-RMSEs
 xtable(global_GOF,
-       caption = "CV-RMSE for predicting logit-CII using selected trees across class size thresholds. *CV-RMSEs for trees chosen based on this metric are optimisitically biased.",
-       label = "tab:CII_GOF")
+       caption = "CV-RMSE for predicting logit-peak-size using selected trees across class size thresholds. *CV-RMSEs for trees chosen based on this metric are optimisitically biased.",
+       label = "tab:peak_GOF")
 
 
 ### Construct table with root-CV-MSE, with relative performance (compared to sample SD) in parentheses
@@ -502,25 +502,21 @@ for(i in 1:nrow(GOF_table)){
 
 ### Format this table for Latex
 xtable(GOF_table,
-       caption = "Root-CV error rate for predicting logit-CII using selected trees across class size thresholds. Relative performance compared to the sample standard deviation is given in parentheses. *CV-RMSEs for trees chosen based on this metric are optimisitically biased.",
-       label = "tab:CII_GOF")
+       caption = "Root-CV error rate for predicting logit-peak-size using selected trees across class size thresholds. Relative performance compared to the sample standard deviation is given in parentheses. *CV-RMSEs for trees chosen based on this metric are optimisitically biased.",
+       label = "tab:peak_GOF")
 
 
 
 ### Summaries of CV trees
 xtable(CV_summ,
-       caption = "Summaries of CV-tuned trees for predicting CII across class size thresholds.",
-       label = "tab:CII_CV_Trees")
+       caption = "Summaries of CV-tuned trees for predicting peak outbreak size across class size thresholds.",
+       label = "tab:peak_CV_Trees")
 
 
 
 
-test <- data_tree %>% 
-  filter(threshold == "inf")
-q <- test$logit
-w <- exp(q) / (1+ exp(q))
-hist(w, breaks = unique(w), freq=T, main = "Histogram of CII for Threshold=Inf")
+global_GOF[this_thresh, seq_along(tree_sizes)] <- unlist(errs_small$rabs_xerror)
 
-hist(q, breaks = unique(q), freq=T, main = "Histogram of CII for Threshold=Inf")
-
-check <- table(test$logit)
+this_thresh
+tree_sizes
+errs_small

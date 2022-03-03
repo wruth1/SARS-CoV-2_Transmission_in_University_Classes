@@ -194,7 +194,7 @@ global_rel_GOF <- global_GOF
 ### Container for summaries of CV trees
 CV_summ <- array(0, dim = c(4,4))
 rownames(CV_summ) <- all_thresholds
-colnames(CV_summ) <- c("1se-splits", "1se-rel err", "min-splits", "min-rel err")
+colnames(CV_summ) <- c("1se-splits", "1se-err", "min-splits", "min-err")
 
 
 

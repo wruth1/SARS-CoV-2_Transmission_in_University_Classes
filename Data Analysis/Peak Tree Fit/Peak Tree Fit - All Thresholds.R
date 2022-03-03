@@ -332,20 +332,6 @@ for (this_thresh in all_thresholds) {
     mutate(rxerror = sqrt(xerror))
   
   
-  ### Plot errors for subtrees of the provided rpart object which do not exceed err
-  plot_good <- function(fit, err) {
-    this_info <- fit %>%
-      .$cptable %>%     # Extract the CP table
-      as_tibble() %>%   # Convert to a tibble for dplyr verbs
-      filter(xerror <= err) # Remove large errors
-    
-    this_plot <- ggplot(this_info, aes(x = nsplit, y = xerror)) +
-      geom_line() + xlab("Number of Splits") + ylab("CV Error")
-    plot(this_plot)
-  }
-  
-  
-  
   ##############################################
   ### Plot full trajectory of subtree errors ###
   ##############################################
@@ -373,6 +359,7 @@ for (this_thresh in all_thresholds) {
   )
   plot(plot_full)
   dev.off()
+  
   
   
   
@@ -459,9 +446,11 @@ for (this_thresh in all_thresholds) {
   
   ### Make a list with all trees of interest
   all_trees <- list(fit_min, fit_1se)
+  if(this_thresh == "100") tree_sizes[1] = 9    # Hacky solution to no 10-split tree
   for(size in rev(tree_sizes)){
     all_trees <- append(all_trees, list(prune_size(fit_full, size)))
   }
+  if(this_thresh == "100") tree_sizes[1] = 10   # Undo hacky solution to no 10-split tree
   
   ### Extract variable importances from trees of interest and store in all_imps
   for(j in seq_along(all_trees)){
