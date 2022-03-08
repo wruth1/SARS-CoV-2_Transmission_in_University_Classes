@@ -1,0 +1,451 @@
+
+
+library(knitr)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(gridExtra)
+library(purrr)
+library(tibble)
+library(ggfortify) # ggplot version of regression diagnostics
+library(latex2exp) # Use latex for plot labels with the TeX() function
+library(xtable)    # Create latex tables
+library(rpart)
+library(rpart.plot)
+
+
+num_students <- 25627
+
+data <-
+  read.csv("D:/School/Thesis/COVID_Network_Julia/Data/Output/All_Outbreak_Peaks.csv")
+
+num_trials = nrow(data)
+
+# Number of students remaining in the network for each threshold level
+network_sizes <- c(16866, 23660, 24752, 25627)
+
+# ------------- Replace infinity character in threshold variable ------------- #
+thresh <- data$threshold
+inds_thresh <- thresh == unique(thresh)[4]
+data[inds_thresh, "threshold"] <- "inf"
+data$threshold = factor(data$threshold, levels = c("20", "50", "100", "inf"))
+
+all_thresholds <- unique(data$threshold)
+thresh2size <- function(thresh) {
+  switch(
+    thresh,
+    "20" = network_sizes[1],
+    "50" = network_sizes[2],
+    "100" = network_sizes[3],
+    "inf" = network_sizes[4],
+    stop("Invalid threshold level.")
+  )
+}
+
+for (i in 1:(ncol(data) - 1)) {
+  data[, i] <- factor(data[, i])
+}
+
+for (i in 1:(ncol(data) - 2)) {
+  levels(data[, i]) <- c("low", "med", "high")
+}
+
+
+
+get_formula <- function(resp_var, control_var, data, int = TRUE) {
+  model_vars = data %>%
+    select(-!!resp_var,-!!control_var) %>%
+    names()
+  
+  # First-order terms
+  (form_str <- paste(model_vars, collapse = " + "))
+  (form_str <- paste(control_var, form_str, sep = " + "))
+  (form_str <- paste(resp_var, form_str, sep = " ~ "))
+  
+  # Second-order terms. Only include interactions with the control variable
+  if (int) {
+    (form_int_str <- paste(model_vars, control_var, sep = "*"))
+    (form_int_str <- paste(form_int_str, collapse = " + "))
+    (form_str <- paste(form_str, form_int_str, sep = " + "))
+  }
+  
+  # Convert string to formula object
+  form = formula(form_str)
+  
+  form
+}
+
+
+### Build vector of proportions
+group_size <- num_trials / 4
+all_network_sizes <- rep(network_sizes,
+                         each = group_size)
+data_logit_raw <- data %>%
+  arrange(threshold) %>%
+  mutate(network_size = all_network_sizes,
+         prop = peak / network_size) %>%
+  select(-peak, -network_size)
+
+
+
+## Build formula for model fitting
+form = get_formula("prop", "threshold", data_logit_raw)
+
+
+### Estimate SD of Y in each group empirically
+all_SDs_obs_raw = data_logit_raw %>%
+  group_by(across(infect_prop_A:threshold)) %>%
+  summarise(
+    p_hat_obs = mean(prop),
+    SD_obs = sd(prop),
+    .groups = "drop"
+  )
+
+all_SDs_obs <- filter(all_SDs_obs_raw,!((threshold == "100") &
+                                          (SD_obs > 0.03)))
+
+
+
+### Remove extreme outlier from original data frame
+row_remove <- all_SDs_obs_raw %>%
+  filter((threshold == "100") & (SD_obs > 0.03)) %>%
+  select(infect_prop_A:threshold)
+
+data_logit <- data_logit_raw %>%
+  filter(!((infect_prop_A %in% row_remove[[1]]) &
+             (infect_prop_I1 %in% row_remove[[2]]) &
+             (infect_param_I2 %in% row_remove[[3]]) &
+             (advance_prob_E %in% row_remove[[4]]) &
+             (advance_prob_A %in% row_remove[[5]]) &
+             (advance_prob_I1 %in% row_remove[[6]]) &
+             (advance_prob_I2 %in% row_remove[[7]]) &
+             (E_to_A_prob %in% row_remove[[8]]) &
+             (threshold %in% row_remove[[9]])
+  ))
+
+
+
+### Function to prune the provided rpart tree to the specified number of splits
+prune_size <- function(fit, num_splits){
+  this_cp <- fit %>% 
+    .$cptable %>% 
+    as_tibble() %>% 
+    filter(nsplit == num_splits) %>% 
+    select(CP) %>% 
+    unlist()
+  
+  this_fit <- prune(fit, this_cp)
+}
+
+
+
+#
+# Process Data
+#
+logit <- function(p) {
+  log(p / (1 - p))
+}
+
+# Compute logit
+data_tree <- data_logit %>%
+  mutate(logit = logit(prop)) %>% # Apply the logit transform to the response
+  # mutate(logit = prop) %>%          # No logit transform
+  select(-prop)
+var_names <- c("rA",
+               "rI1",
+               "pI2",
+               "qE",
+               "qA",
+               "qI1",
+               "qI2",
+               "qEA",
+               "threshold",
+               "logit")
+colnames(data_tree) <- var_names
+
+
+## Remove large I1 infectiousness
+data_tree %<>% filter(rI1 != "high")
+
+
+### Plot splits
+plot_by_size <- function(fit, num_splits, type, extra, thresh){
+  this_fit <- prune_size(fit, num_splits)
+  rpart.plot(this_fit, type = type, extra = extra,
+             main = paste("Threshold =", thresh))
+}
+
+
+
+
+##################################################
+### Fit trees, make plots, measure performance ###
+##################################################
+
+### Container to store variable importance across class size thresholds
+global_variable_importances <- vector("list", length(all_thresholds))
+names(global_variable_importances) <- all_thresholds
+
+
+### Container to store CV-errors across class size thresholds
+global_GOF <- array(0, dim = c(4, 7))
+rownames(global_GOF) <- all_thresholds
+colnames(global_GOF) <- c(10, 25, 50, 100, 200, "CV-1se", "CV-min")
+
+### Container to store relative CV-errors across class size thresholds
+global_rel_GOF <- global_GOF
+
+### Container for summaries of CV trees
+CV_summ <- array(0, dim = c(4,4))
+rownames(CV_summ) <- all_thresholds
+colnames(CV_summ) <- c("1se-splits", "1se-rel err", "min-splits", "min-rel err")
+
+
+for (this_thresh in all_thresholds) {
+  print(this_thresh)
+  
+  #####################
+  ### Fit Full Tree ###
+  #####################
+  fit_full <- data_tree %>%
+    filter(threshold == this_thresh) %>%
+    select(-threshold) %>%
+    rpart(logit ~ .,
+          data = .,
+          model = T,
+          control = rpart.control(cp = 0))
+  
+  info_full <- fit_full$cptable
+  
+  ### Get MSE of root node
+  stump <- prune_size(fit_full, 0)
+  Y_hat <- predict(stump)
+  Y <- data_tree %>% 
+    filter(threshold == this_thresh) %>% 
+    select(logit)
+  stump_rmse <- sqrt(sum((Y - Y_hat)^2) / nrow(Y))
+  
+  
+  
+  
+  ############################
+  ### Plot first 25 splits ###
+  ############################
+  
+  plot_by_size(fit_full, 25, type = 0, extra = 0, thresh = this_thresh)
+  
+  
+  #######################
+  ### Fit CV-Min Tree ###
+  #######################
+  
+  ### Get minimum CV error and corresponding CP value
+  ind.best = which.min(info_full[, "xerror"])
+  CV.best = info_full[ind.best, "xerror"]
+  CP.best = info_full[ind.best, "CP"]
+  
+  ### Get the geometric mean of best CP with one above it
+  if (ind.best == 1) {
+    ### If minimum CP is in row 1, store this value
+    CP.GM = CP.best
+  } else{
+    ### If minimum CP is not in row 1, average this with the value from the
+    ### row above it.
+    
+    ### Value from row above
+    CP.above = info_full[ind.best - 1, "CP"]
+    
+    ### (Geometric) average
+    CP.GM = sqrt(CP.best * CP.above)
+  }
+  
+  
+  ### Fit minimum CV error tree
+  fit_min = prune(fit_full, cp = CP.best)
+  
+  ### Get the number of splits in the minimum CV error tree
+  ind_min <- which.min(info_full[, "xerror"])
+  splits_min <- info_full[ind_min, "nsplit"]
+  err_min <- sqrt(info_full[ind_min, "xerror"])
+  
+  global_GOF[this_thresh, "CV-min"] <- err_min * stump_rmse
+  global_rel_GOF[this_thresh, "CV-min"] <- err_min
+  
+  CV_summ[this_thresh, 3] <- splits_min # Number of splits
+  CV_summ[this_thresh, 4] <- err_min * stump_rmse # CV-min RMSE
+  
+  
+  #######################
+  ### Fit CV-1SE Tree ###
+  #######################
+  
+  ### Get 1se rule CP value
+  err.min = info_full[ind.best, "xerror"]
+  se.min = info_full[ind.best, "xstd"]
+  threshold = err.min + se.min
+  ind.1se = min(which(info_full[1:ind.best, "xerror"] < threshold))
+  
+  ### Take geometric mean with superior row
+  CP.1se.raw = info_full[ind.1se, "CP"]
+  if (ind.1se == 1) {
+    ### If best CP is in row 1, store this value
+    CP.1se = CP.1se.raw
+  } else{
+    ### If best CP is not in row 1, average this with the value from the
+    ### row above it.
+    
+    ### Value from row above
+    CP.above = info_full[ind.1se - 1, "CP"]
+    
+    ### (Geometric) average
+    CP.1se = sqrt(CP.1se.raw * CP.above)
+  }
+  
+  ### Prune the tree
+  fit_1se = prune(fit_full, cp = CP.1se)
+  
+  
+  ### Get the number of splits in the 1se tree
+  ind_1se <- ind.1se
+  splits_1se <- info_full[ind_1se, "nsplit"]
+  err_1se <- sqrt(info_full[ind_1se, "xerror"])
+  
+  global_GOF[this_thresh, "CV-1se"] <- err_1se * stump_rmse
+  global_rel_GOF[this_thresh, "CV-1se"] <- err_1se
+  
+  CV_summ[this_thresh, 1] <- splits_1se # Number of splits
+  CV_summ[this_thresh, 2] <- err_1se * stump_rmse # CV-1se RMSE
+  
+  
+  #####################
+  ### Plotting Time ###
+  #####################
+  
+  info <- as_tibble(info_full) %>% 
+    mutate(rxerror = sqrt(xerror))
+  
+  
+  ##############################################
+  ### Plot full trajectory of subtree errors ###
+  ##############################################
+  
+  CV_splits <- c(splits_min, splits_1se)
+  CV_errs <- c(err_min, err_1se)
+
+  plot_full <- ggplot(info, aes(x = nsplit, y = rxerror * stump_rmse)) +
+    geom_line() +
+    xlab("Number of Splits") + ylab("CV RMSE (logit scale)") +
+
+    ggtitle(paste0("Threshold = ", this_thresh)) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    geom_vline(xintercept = CV_splits) + ylim(c(0, NA))
+    
+  
+  plot(plot_full)  
+  
+  
+  ################################
+  ### Plot subtree error rates ###
+  ################################
+  
+  
+  ### Get CV errors for reasonably sized subtrees
+  tree_sizes <- c(10, 25, 50, 100, 200)
+  if(this_thresh == "100") tree_sizes[1] = 9    # Hacky solution to no 10-split tree
+  errs_small <- info %>%
+    filter(nsplit %in% tree_sizes) %>%
+    select(rxerror) %>%
+    unlist() %>%
+    as_tibble()
+  if(this_thresh == "100") tree_sizes[1] = 10   # Undo hacky solution to no 10-split tree
+  
+  colnames(errs_small) <- "rxerror"
+  errs_small %<>% 
+    mutate(rabs_xerror = rxerror * stump_rmse,
+           )
+  
+  
+  global_GOF[this_thresh, seq_along(tree_sizes)] <- unlist(errs_small$rabs_xerror)
+  global_rel_GOF[this_thresh, seq_along(tree_sizes)] <- unlist(errs_small$rxerror)
+  
+  
+  plot_sizes <-
+    ggplot(info[1:max(tree_sizes), ], aes(x = nsplit, y = rxerror*stump_rmse)) +
+    geom_line() + ylim(c(0, NA)) +
+    geom_hline(yintercept = err_min * stump_rmse , color = "red") +
+    geom_vline(xintercept = tree_sizes, color = "blue") +
+    geom_rug(
+      data = errs_small,
+      mapping = aes(y = rabs_xerror),
+      inherit.aes = F,
+      color = "blue"
+    ) +
+    xlab("Number of Splits") + ylab("CV RMSE (logit scale)") +
+
+    ggtitle(paste0("Threshold = ", this_thresh)) +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  plot(plot_sizes)
+  
+  ##########################################
+  ### Make table of variable importances ###
+  ##########################################
+  
+  pred_names <- var_names[1:8]
+
+  
+  ### Get the variable importances from the provided rpart fit, and rescale 
+  ### so they sum to 1
+  get_var_imp <- function(fit){
+    raw_imps <- fit$variable.importance
+    raw_imps / sum(raw_imps)
+  }
+  
+  ### Store this_imps in row i of all_imps, and return updated all_imps
+  store_var_imps <- function(all_imps, i, this_imps){
+    for(pred in pred_names){
+      all_imps[i,pred] <- this_imps[pred]
+    }
+    return(all_imps)
+  }
+  
+  ### Build container for all variable improvements
+  all_imps <- array(0, dim = c(7, 8))
+  row.names(all_imps) <- c("CV-min", "CV-1se", "200", "100", "50", "25", "10")
+  colnames(all_imps) <- pred_names
+  
+  ### Make a list with all trees of interest
+  all_trees <- list(fit_min, fit_1se)
+  if(this_thresh == "100") tree_sizes[1] = 9    # Hacky solution to no 10-split tree
+  for(size in rev(tree_sizes)){
+    all_trees <- append(all_trees, list(prune_size(fit_full, size)))
+  }
+  if(this_thresh == "100") tree_sizes[1] = 10   # Undo hacky solution to no 10-split tree
+  
+  ### Extract variable importances from trees of interest and store in all_imps
+  for(j in seq_along(all_trees)){
+    this_imps <- get_var_imp(all_trees[[j]])
+    all_imps <- store_var_imps(all_imps, j, this_imps)
+  }
+  
+  ### Store variable importances for this class size threshold
+  global_variable_importances[[this_thresh]] <- all_imps
+  
+  
+}
+
+# Variable Importance -----------------------------------------------------
+
+### Re-arrange trees from smallest to largest
+for(thresh in all_thresholds){
+  this_imps <- global_variable_importances[[thresh]]
+  global_variable_importances[[thresh]] <- this_imps[rev(1:nrow(this_imps)),]
+}
+
+### Format variable importances for Latex
+for(thresh in all_thresholds){
+  this_imps <- global_variable_importances[[thresh]]
+  
+  print((this_imps))
+}
+

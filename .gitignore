@@ -12,3 +12,7 @@ Data/*
 # Omit cached data and plots for RMarkdown files
 **/*_cache/**
 **/*_files/**
+
+
+# Omit R workspace files
+*.RData

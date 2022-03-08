@@ -1,0 +1,4 @@
+"0","### Subdivide by class size threshold"
+"0","CII_hist_group <- CII_hist + "
+"0","  facet_wrap(~threshold)#, scales = ""free"")"
+"0","plot(CII_hist_group)"

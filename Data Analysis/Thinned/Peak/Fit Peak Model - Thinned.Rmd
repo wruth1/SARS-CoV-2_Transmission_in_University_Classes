@@ -113,3 +113,11 @@ for(i in 1:9){
 grid.arrange(grobs = all_boxplots, ncol=3)
 plot(all_boxplots[[9]])
 ```
+
+```{r Histogram_Grid}
+hist_grid <- ggplot(data_logit, aes(x = prop)) +
+  geom_histogram(bins = 500) +
+  facet_wrap(~ threshold)
+plot(hist_grid)
+```
+

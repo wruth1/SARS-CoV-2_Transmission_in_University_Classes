@@ -1,0 +1,27 @@
+"0","all_hists_fixed <- list()"
+"0","for(i in seq_along(all_thresholds)){"
+"0","  this_thresh <- all_thresholds[i]"
+"0","  "
+"0","  this_data <- data_logit %>% "
+"0","    filter(threshold == this_thresh)"
+"0","  "
+"0","  this_plot <- ggplot(this_data, aes(x = prop)) +"
+"0","  xlab(""CII"") + theme(plot.title = element_text(hjust = 0.5)) +"
+"0","    ggtitle(this_thresh) + xlim(0, 1) + geom_histogram(bins = 500)"
+"0","  "
+"0","  all_hists_fixed[[i]] <- this_plot"
+"0","}"
+"0",""
+"0","CII_hist_group_fixed <- grid.arrange(grobs = all_hists_fixed, nrow = 2, ncol = 2)"
+"2","Warning:"
+"2"," Removed 2 rows containing missing values (geom_bar).
+"
+"2","Warning:"
+"2"," Removed 2 rows containing missing values (geom_bar).
+"
+"2","Warning:"
+"2"," Removed 2 rows containing missing values (geom_bar).
+"
+"2","Warning:"
+"2"," Removed 2 rows containing missing values (geom_bar).
+"

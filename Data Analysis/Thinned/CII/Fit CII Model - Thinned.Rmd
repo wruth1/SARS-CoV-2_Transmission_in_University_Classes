@@ -111,4 +111,5 @@ for(i in 1:9){
   all_boxplots[[i]] <- this_plot
 }
 grid.arrange(grobs = all_boxplots, ncol=3)
+plot(all_boxplots[[9]])
 ```

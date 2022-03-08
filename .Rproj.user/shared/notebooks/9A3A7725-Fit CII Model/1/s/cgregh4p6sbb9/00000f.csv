@@ -1,0 +1,5 @@
+"0","### Super hacky way to get number of students remaining in each network. Use the threshold factor to index a list of network sizes."
+"0","pure_rep_plot_ref <- pure_rep_plot +"
+"0","  geom_line(aes(y = p_hat_obs*(1 - p_hat_obs)/network_sizes[threshold]),"
+"0","    color = ""red"")#, size=1.5)"
+"0","plot(pure_rep_plot_ref)"

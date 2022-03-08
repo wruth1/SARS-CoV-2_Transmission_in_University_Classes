@@ -1,0 +1,4 @@
+"0","pure_rep_plot <- ggplot(all_SDs_obs, aes(x = p_hat_obs, y = SD_obs^2)) +"
+"0","  geom_point(size = 0.25) + facet_wrap(~threshold, scales = ""free"") +"
+"0","  xlab(""Average CII"") + ylab(""Observed Variance"")"
+"0","plot(pure_rep_plot)"
